@@ -1,0 +1,13 @@
+{% set title = "Error" %}
+{% extends "base.html.j2" %}
+
+{% block content %}
+    {% include "banner.html.j2" %}
+    
+    <main>
+        <section class="error">
+            <h1>{{message}}</h1>
+            <a class="button" href="/">Go to Homepage</a>
+        </section>
+    </main>
+{% endblock content %}

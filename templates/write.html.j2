@@ -1,0 +1,201 @@
+{% set title = "write" %}
+{% set body_class = "cover" %}
+{% extends "base.html.j2" %}
+
+{% block header %}
+    <link rel="stylesheet" href="/static/fonts/fontawesome.css">
+
+    <script src="/static/scripts/markdown.js"></script>
+    <script src="/static/scripts/write.js"></script>
+{% endblock header %}
+
+{% if estory is none and g.user.stories|length > 0 %}
+    {% set estory = g.user.stories[0] %}
+
+    {% if estory.chapters|length > 0 %}
+        {% set echapter = estory.chapters[0] %}
+    {% else %}
+        {% set echapter = none%}
+    {% endif %}
+{% endif %}
+
+{% block content %}
+    {% include "banner.html.j2" %}
+    
+    <div id="cover">
+        <div class="flex">
+        {% set form_id = "story-image-form" %}
+        {% if estory is not none %}
+            {% set form_action = "/write/" ~ estory.id %}
+        {% endif %}
+        {% include "imgform.html.j2" %}
+        </div>
+    </div>
+
+    <main class="write">
+        <section id="details">
+            <div id="stories">
+                <div class="select-box">
+                {% for story in g.user.stories %}
+                    <div
+                        data-id="{{story.id}}"
+                    {% if story.id == estory.id %}
+                        class="selected"
+                    {% endif %}
+                    >
+                        <i class="delete fas fa-times"></i>
+                        <div>{{story.title}}</div>
+                        <i class="rename fas fa-edit"></i>
+                    </div>
+                {% endfor %}
+                </div>
+                
+                <div id="new-story">
+                    <i class="fas fa-plus"></i>
+                </div>
+            </div>
+            
+            <div id="story-info">
+                <div
+                    id="story-thumbnail"
+                    class="banner-img"
+                {% if estory is not none %}
+                    style="--image:url({{estory.thumbnail}});"
+                {% else %}
+                    style="--image:url({{g.DEFAULT_THUMBNAIL_URI}});"
+                {% endif %}
+                ></div>
+
+                {% if estory is not none %}
+                <textarea id="story-summary">{{estory.summary}}</textarea>
+                {% else %}
+                <textarea id="story-summary"></textarea>
+                {% endif %}
+            </div>
+
+            <div id="story-flags">
+                <input
+                    type="checkbox"
+                    id="story-private"
+                    data-flag="private"
+                {% if estory is not none and estory.private %}
+                    checked
+                {% elif estory is none %}
+                    disabled
+                {% endif %}
+                >
+                <label for="story-private">Private</label>
+                <br>
+
+                <input
+                    type="checkbox"
+                    id="can-comment"
+                    data-flag="can_comment"
+                {% if estory is not none and estory.can_comment %}
+                    checked
+                {% elif estory is none %}
+                    disabled
+                {% endif %}
+                >
+                <label for="can-comment">Allow Comments</label>
+
+            {% if g.user.allow_risque %}
+                <br>
+                <input
+                    type="checkbox"
+                    id="is-risque"
+                    data-flag="is_risque"
+                {% if estory is not none and estory.is_risque %}
+                    checked
+                {% elif estory is none %}
+                    disabled
+                {% endif %}
+                    style="--color-r: 255; --color-g: 0; --color-b: 0;"
+                >
+                <label for="is-risque">NSFW</label>
+            {% endif %}
+            </div>
+
+            <form id="story-tags">
+            {% if estory is not none %}
+            {% for tag in estory.tags %}
+                <div class="tag {{tag.type}}">
+                    <span></span>
+                    <span>{{tag.name}}</span>
+                    <i class="delete fas fa-times"></i>
+                </div>
+            {% endfor %}
+            {% endif %}
+                <div class="form-group">
+                    <input
+                        type="text"
+                        id="tag"
+                    {% if g.user.stories|length == 0 %}
+                        disabled
+                    {% endif %}
+                    >
+
+                    <input type="submit" value="Add">
+                </div>
+            </form>
+
+            <div id="chapters">
+                <div class="select-box">
+                {% if echapter is not none %}
+                {% for chapter in estory.chapters %}
+                    <div
+                        data-id="{{chapter.id}}"
+                    {% if chapter.id == echapter.id %}
+                        class="selected"
+                    {% endif %}
+                    >
+                        <i class="delete fas fa-times"></i>
+                        <div>{{chapter.name}}</div>
+                        <i class="move-up fas fa-angle-up"></i>
+                        <i class="move-down fas fa-angle-down"></i>
+                        <i class="rename fas fa-edit"></i>
+                    </div>
+                {% endfor %}
+                {% endif %}
+                </div>
+
+                <div id="new-chapter">
+                    <i class="fas fa-plus"></i>
+                </div>
+            </div>
+
+            <div id="chapter-info">
+            {% if echapter is not none and echapter.author_notes is not none %}
+                <textarea id="chapter-author-notes">{{echapter.author_notes}}</textarea>
+            {% else %}
+                <textarea id="chapter-author-notes"></textarea>
+            {% endif %}
+            </div>
+
+            <div id="chapter-flags">
+                <input
+                    type="checkbox"
+                    id="chapter-private"
+                {% if echapter is not none and echapter.private %}
+                    checked
+                {% elif echapter is none %}
+                    disabled
+                {% endif %}
+                >
+                <label for="chapter-private">Private</label>
+
+                <button id="save-chapter">Save Changes</button>
+            </div>
+        </section>
+
+        <section class="editor">
+        {% if echapter is not none %}
+            <textarea id="input">{{echapter.text}}</textarea>
+        {% else %}
+            <textarea id="input" disabled></textarea>
+        {% endif %}
+
+            <section id="output"></section>
+        </section>
+    </main>
+{% endblock content %}

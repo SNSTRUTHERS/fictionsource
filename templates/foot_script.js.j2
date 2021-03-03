@@ -1,0 +1,14 @@
+for (const t of document.getElementsByTagName("time")) {
+    t.innerText = (new Date(t.getAttribute("datetime"))).toLocaleString(
+        undefined,
+        {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            second: 'numeric'
+        }
+    );
+}

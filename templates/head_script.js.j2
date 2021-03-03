@@ -1,0 +1,61 @@
+class APIError extends Error {
+    errors = []
+    
+    constructor(...errors) {
+        super(errors.reduce((accum, str) => accum + str + "\n", ""));
+
+        this.errors = errors
+    }
+}
+window["APIError"] = APIError;
+
+window["apiCall"] = async (
+    apiPath,
+    method = "GET",
+    reqData = undefined,
+    authorization = undefined
+) => {
+    const fetchData = { method, redirect: 'follow', headers: {} };
+    if (fetchData !== undefined) {
+        fetchData.body = JSON.stringify(reqData);
+        fetchData.headers['Content-Type'] = 'application/json';
+    }
+
+    if (authorization !== undefined) {
+        fetchData.headers['Authorization'] = `Basic ${btoa(
+            authorization.username + ":" + authorization.password
+        )}`;
+    }
+
+    const resp = await fetch(
+        `${window.location.protocol}//${window.location.host}/api/${apiPath}`,
+        fetchData
+    );
+    const data = await resp.json();
+    
+    if (data.type === "error")
+        throw new APIError(...data.errors)
+    else if (data.type === "success")
+        return data.data;
+    else
+        throw new APIError(`Unrecognized response type "${data.type}".`);
+};
+
+window["renderMarkdown"] = (markdownText) => window["markdown"].parse(
+    markdownText.replace(
+        /\<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)?(\<\/\1>)?/gi, "\\<$1\\>$2$3"
+    ).replace(
+        /\$\{([0-9A-Z \-_]+)?\}/gi, "<span class=\"$1\">"
+    ).replaceAll(
+        "${/}", "</span>"
+    ).replaceAll(
+        "`", "\\`"
+    ).replaceAll(
+        "~", "\\~"
+    ), {
+        parseFlags: window["markdown"].ParseFlags.NO_INDENTED_CODE_BLOCKS |
+                    window["markdown"].ParseFlags.COLLAPSE_WHITESPACE |
+                    window["markdown"].ParseFlags.STRIKETHROUGH |
+                    window["markdown"].ParseFlags.UNDERLINE
+    }
+);

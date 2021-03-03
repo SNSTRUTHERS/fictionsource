@@ -1,0 +1,29 @@
+<div>
+    <img src="{{story.thumbnail}}">
+
+    <div>
+        <h3><a href="/read/{{story.id}}">{{story.title}}</a></h3>
+
+{% if NO_USERNAME is not defined %}
+        <p>by <a href="/user/{{story.author.username}}">{{story.author.username}}</a></p>
+{% endif %}
+
+        <p>{{story.summary}}</p>
+    </div>
+    <div>
+
+    {% if NO_TIMESTAMPS is not defined %}
+        <b>Posted: </b> <time datetime="{{g.format_time(story.posted)}}"></time><br>
+        <b>Modified: </b> <time datetime="{{g.format_time(story.modified)}}"></time><br>
+    {% endif %}
+
+    {% if story.is_risque %}
+        <a class="tag risque" href="/read?q=*&filter_risque=-1"><span></span><span>NSFW</span></a>
+    {% endif %}
+
+    {% for tag in story.tags %}
+        <a class="tag {{tag.type}}" href="/read?q={{tag.query_name}}">
+            <span></span><span>{{tag.name}}</span></a>
+    {% endfor %}
+    </div>
+</div>

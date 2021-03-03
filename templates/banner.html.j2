@@ -1,0 +1,29 @@
+{% if g.user is not defined %}
+    {% set g.user = none %}
+{% endif %}
+
+<nav>
+    <a class="logo" href="/"></a>
+    
+{% if g.user is not none %}
+    <span><a href="/read">Read</a> <section></section></span>
+
+    <span><a href="/write">Write</a></span>
+{% endif %}
+
+    <span class="spacer"></span>
+
+{# Show Login/Register buttons when not logged in; user banner when logged in #}
+{% if g.user is not none %}
+    <span><a href="/logout">Log Out</a></span>
+    <a
+        class="banner-img"
+        href="/user/{{g.user.username}}"
+        style="--image:url('{{g.user.image}}')"
+    ></a>
+{% else %}
+    <a href="/login">Log In</a>
+    <a href="/register">Register</a>
+    <span><!-- spacer --></span>
+{% endif %}
+</nav>

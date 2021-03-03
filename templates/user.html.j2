@@ -1,0 +1,105 @@
+{% set title = user.username %}
+{% extends "base.html.j2" %}
+
+{% block content %}
+    {% include "banner.html.j2" %}
+
+    <div id="cover"></div>
+
+    <div class="user">
+        <img src="{{user.image}}" width="256" height="256">
+
+        <header>
+            <h1 id="username">{{user.username}}</h1>
+        </header>
+
+        <main>
+            <p>Joined <time datetime="{{g.format_time(user.joined)}}"></time></p>
+
+        {% if g.user is not none and user != g.user %}
+            <button 
+                id="follow"
+            {% if user in g.user.following %}
+                class="unfollow"
+            >Unfollow</button>
+            {% else %}
+                class="follow"
+            >Follow</button>
+            {% endif %}
+        {% endif %}
+
+            <hr>
+
+        {% if user.description is not none %}
+            <p class="description">{{user.description}}</p>
+        {% endif %}
+
+            <h2>Stories</h2>
+        {% if user.stories|length > 0 %}
+            {% set NO_USERNAME = 1 %}
+            <section class="stories">
+            {% for story in user.visible_stories(g.user) %}
+                {% include "story.html.j2" %}
+            {% else %}
+                <i>This user hasn't posted any stories.</i>
+            {% endfor %}
+            </section>
+        {% else %}
+            <i>User hasn't posted any stories.</i>
+        {% endif %}
+
+            <h2>Favorite Stories</h2>
+        {% if user.favorite_stories|length > 0 %}
+            <section class="stories">
+            {% for story in user.favorite_stories if story.visible() %}
+                {% include "story.html.j2" %}
+            {% else %}
+                <i>This user hasn't favorited any stories.</i>
+            {% endfor %}
+            </section>
+        {% else %}
+            <i>User hasn't favorited any stories.</i>
+        {% endif %}
+
+            <h2>Following Stories</h2>
+        {% if user.following_stories|length > 0 %}
+            <section class="stories">
+            {% for story in user.following_stories if story.visible() %}
+                {% include "story.html.j2" %}
+            {% else %}
+                <i>This user hasn't followed any stories.</i>
+            {% endfor %}
+            </section>
+        {% else %}
+            <i>User hasn't followed any stories.</i>
+        {% endif %}
+        </main>
+    </div>
+{% endblock content %}
+
+{% block footer %}
+<script>
+{% if g.user is not none and user != g.user %}
+const apiCall = window["apiCall"];
+const followButton = document.getElementById("follow");
+followButton.onclick = async () => {
+    if (followButton.classList.contains("loading"))
+        return;
+
+    const method = followButton.className === "follow" ? "POST" : "DELETE";
+
+    followButton.classList.add("loading");
+    document.body.classList.toggle("cover");
+
+    await apiCall(`user/{{user.username}}/follow`, method);
+
+    document.body.classList.toggle("cover");
+    followButton.className = method === "POST" ? "unfollow" : "follow";
+    followButton.innerText =
+        followButton.className.charAt(0).toUpperCase() +
+        followButton.className.slice(1)
+    ;
+};
+{% endif %}
+</script>
+{% endblock footer %}

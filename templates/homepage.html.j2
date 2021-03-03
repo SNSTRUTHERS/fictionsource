@@ -1,0 +1,40 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+    {% include "banner.html.j2" %}
+
+    <header class="poster">
+        <div>
+            <span class="title">FictionSource</span><br>
+            <span class="subtitle">Your creativity unhinged</span>
+        </div>
+
+        <div class="poster-text">
+        {% if g.user is not none %}
+            <a href="/read">Read</a> or <a href="/write">Write</a>
+        {% else %}
+            <a href="/register">Register</a> or <a href="/login">Log In</a>
+        {% endif %}
+        </div>
+    </header>
+
+    <main>
+    {% for section in sections %}
+    {% if 'link' in section and section['link'] is not none %}
+        <h2><a href="{{section['link']}}">{{section['name']}}</a></h2>
+    {% elif 'link' in section and section['link'] is none %}
+        <h2>{{section['name']}}</h2>
+    {% else %}
+        <h2><a href="/read?q=genre:{{section['id']}}">{{section['name']}}</a></h2>
+    {% endif %}
+
+        <section id="{{section['id']}}" class="stories">
+        {% for story in section['stories'] %}
+            {% include "story.html.j2" %}
+        {% else %}
+            <i>No stories in this genre have been posted.</i>
+        {% endfor %}
+        </section>
+    {% endfor %}
+    </main>
+{% endblock content %}

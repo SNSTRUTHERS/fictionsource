@@ -1,0 +1,201 @@
+{% if query is defined %}
+    {% set title = "Search Results for \"" + query + "\"" %}
+    {% set sanitized_query = query.replace('"', '&quot;') %}
+{% else %}
+    {% set title = "Search" %}
+{% endif %}
+
+{% if sort_by is not defined %}
+    {% set sort_by = "modified" %}
+{% endif %}
+
+{% if descending is not defined %}
+    {% set descending = true %}
+{% endif %}
+
+{% if filter_risque is not defined %}
+    {% set filter_risque = none %}
+{% endif %}
+
+{% if count is not defined %}
+    {% set count = 25 %}
+{% endif %}
+
+{% if prev_querystrs is not defined %}
+    {% set prev_querystrs = [] %}
+{% endif %}
+
+{% if next_querystrs is not defined %}
+    {% set next_querystrs = [] %}
+{% endif %}
+
+{% extends "base.html.j2" %}
+
+{% block content %}
+    {% include "banner.html.j2" %}
+
+    <main>
+        <form method="GET" action="/read" class="container">
+            <div class="form-group">
+                <input type="text" id="q" name="q" value="{{sanitized_query}}">
+                <input type="submit" value="Go">
+            </div>
+
+            <b>Sort By:</b>
+        {% for enumerator in g.search_sort_by %}
+            <input
+                type="radio"
+                name="sort_by"
+                value="{{enumerator}}"
+                id="sort-by-{{enumerator}}"
+            {% if sort_by == enumerator %}
+                checked
+            {% endif %}
+            >
+            <label for="sort-by-{{enumerator}}">{{enumerator.capitalize()}}</label>
+        {% endfor %}
+            <br>
+
+            <b>Order:</b>
+            <input
+                type="radio"
+                name="descending"
+                value="0"
+                id="ascending-order"
+            {% if not descending %}
+                checked
+            {% endif %}
+            >
+            <label for="ascending-order">Ascending</label>
+
+            <input
+                type="radio"
+                name="descending"
+                value="1"
+                id="descending-order"
+            {% if descending %}
+                checked
+            {% endif %}
+            >
+            <label for="descending-order">Descending</label>
+
+        {% if g.user is not none and g.user.allow_risque %}
+            <br>
+
+            <b>NSFW Filter:</b>
+
+        {% for item in [
+            ('null', none, 0, "Off"),
+            ('on', true, 1, "On"),
+            ('not', false, -1, "Reverse")
+        ] %}
+            <input
+                type="radio"
+                name="filter_risque"
+                value="{{item[2]}}"
+                id="filter-risque-{{item[0]}}"
+            {% if filter_risque == item[1] %}
+                checked
+            {% endif %}
+            >
+            <label for="filter-risque-{{item[0]}}">{{item[3]}}</label>
+        {% endfor %}
+        {% endif %}
+
+            <br>
+            <b>Results per Page:</b>
+        {% for item in [ 10, 25, 50, 100 ] %}
+            <input
+                type="radio"
+                name="count",
+                value="{{item}}",
+                id="count-{{item}}"
+            {% if count == item %}
+                checked
+            {% endif %}
+            >
+            <label for="count-{{item}}">{{item}}</label>
+        {% endfor %}
+        </form>
+
+    {% if query is defined %}
+
+        <h1>Search Results</h1>
+
+    {% if num_results == 0 %}
+        <p><i>No results match the given query.</i></p>
+    {% else %}
+        <section>
+            <span><b>Pages:</b></span>
+        
+        {# jump to first page #}
+        {% if start != 1 %}
+            <a href="{{prev_querystrs[0]}}">&lt;&lt;</a>
+        {% else %}
+            <span class="light">&lt;&lt;</span>
+        {% endif %}
+
+        {# jump to previous page #}
+        {% if prev_querystrs|length > 0 %}
+            <a href="{{prev_querystrs[-1]}}">&lt;</a>
+        {% else %}
+            <span class="light">&lt;</span>
+        {% endif %}
+
+        {% set slice = 4 %}
+
+        {# denote there are more pages before #}
+        {% set i = (prev_querystrs|length - (slice - 1), 1)|max %}
+        {% if i > 1 %}
+            <span>...</span>
+        {% endif %}
+
+        {# list previous and next pages #}
+        {% for qstr in prev_querystrs[-slice:] %}
+            <a href="{{qstr}}">{{i}}</a>
+            {% set i = i + 1 %}
+        {% endfor %}
+            <span>{{i}}</span>
+            {% set i = i + 1 %}
+        {% for qstr in next_querystrs[:slice] %}
+            <a href="{{qstr}}">{{i}}</a>
+            {% set i = i + 1 %}
+        {% endfor %}
+
+        {# denote there are more pages after #}
+        {% if i < prev_querystrs|length + next_querystrs|length + 2 %}
+            <span>...</span>
+        {% endif %}
+
+        {# jump to next page #}
+        {% if next_querystrs|length > 0 %}
+            <a href="{{next_querystrs[0]}}">&lt;</a>
+        {% else %}
+            <span class="light">&gt;</span>
+        {% endif %}
+
+        {# jump to last page #}
+        {% if end + count < num_results %}
+            <a href="{{next_querystrs[-1]}}">&gt;&gt;</a>
+        {% else %}
+            <span class="light">&gt;&gt;</span>
+        {% endif %}
+        </section>
+
+        {# list number of results on the page and in total #}
+        {% set phrase = "results" %}
+        {% if num_results == 1 %}
+            {% set phrase = "result" %}
+        {% endif %}
+        <p>Showing {{start}}-{{end}} of {{num_results}} {{phrase}}.</p>
+
+        <section class="stories">
+    {% for story in results %}
+        {% include "story.html.j2" %}
+    {% endfor %}
+        </section>
+    
+    {% endif %}
+    {% endif %}
+    </main>
+{% endblock content %}

@@ -1,0 +1,26 @@
+{% set title = "Log In" %}
+{% extends "base.html.j2" %}
+
+{% block content %}
+    {% include "banner.html.j2" %}
+
+    <main>
+        <h1>Log In</h1>
+        <p>Don't have an account? <a href="/register">Register</a> a new one!</p>
+
+        <form method="POST">
+            {% include "form.html.j2" %}
+
+            <input type="submit" value="Log In">
+        </form>
+    </main>
+{% endblock content %}
+
+{% block footer %}
+    <script>
+localStorage.removeItem("username");
+
+const form = document.getElementsByTagName("form")[0];
+form.onsubmit = () => localStorage.setItem("username", document.getElementById("username").value);
+    </script>
+{% endblock footer %}

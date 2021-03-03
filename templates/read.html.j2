@@ -1,0 +1,161 @@
+{% set title = "read \"" + chapter.name + "\"" %}
+{% set body_class = "cover" %}
+{% extends "base.html.j2" %}
+
+{% block header %}
+    <link rel="stylesheet" href="/static/fonts/fontawesome.css">
+    <script src="/static/scripts/markdown.js"></script>
+{% endblock header %}
+
+{% block content %}
+    {% include "banner.html.j2" %}
+
+    <div id="cover"></div>
+
+    <main class="read" data-story-id="{{chapter.story.id}}" data-chapter-id="{{chapter.id}}">
+        <section id="chapter-info">
+            <h1>{{chapter.story.title}}</h1>
+            <p>
+                Written by <a
+                    href="/user/{{chapter.story.author.username}}"
+                >{{chapter.story.author.username}}</a>
+            </p>
+            <p>
+                Posted <time datetime="{{g.format_time(chapter.story.posted)}}"></time>;
+                modified <time datetime="{{g.format_time(chapter.story.modified)}}"></time>
+            </p>
+
+        {% if g.user is not none and g.user.id != chapter.story.author_id %}
+            <i
+                id="follow"
+            {% if chapter.story in g.user.following_stories %}
+                class="fas fa-star"
+            {% else %}
+                class="far fa-star"
+            {% endif %}
+            ></i>
+            <label for="follow">Follow Story</label><br>
+
+            <i
+                id="favorite"
+            {% if chapter.story in g.user.favorite_stories %}
+                class="fas fa-heart"
+            {% else %}
+                class="far fa-heart"
+            {% endif %}
+            ></i>
+            <label for="favorite">Favorite Story</label>
+        {% endif %}
+
+            <div>
+            {% if chapter.story.is_risque %}
+                <a class="tag risque" href="/read?q=^nsfw"><span></span><span>NSFW</span></a>
+            {% endif %}
+            {% for tag in chapter.story.tags %}
+                <a class="tag {{tag.type}}" href="/read?q={{tag.query_name}}">
+                    <span></span><span>{{tag.name}}</span></a>
+            {% endfor %}
+            </div>
+
+            <h2>
+                <span class="light">Chapter {{chapter.number}}</span>
+            {% if chapter.name is not none %}
+                - {{chapter.name}}
+            {% endif %}
+            {% if chapter.story.author.id == g.user.id %}
+                <a href="/write?chapter={{chapter.id}}">
+                    <i id="edit" class="fas fa-edit"></i>
+                </a>
+            {% endif %}
+            </h2>
+            <p>
+                Posted <time datetime="{{g.format_time(chapter.posted)}}"></time>;
+                modified <time datetime="{{g.format_time(chapter.modified)}}"></time>
+            </p>
+
+        {% if chapter.previous is not none %}
+            <a class="button" href="/read/{{chapter.previous.id}}">Previous Chapter</a>
+        {% endif %}
+        {% if chapter.next is not none %}
+            <a class="button" href="/read/{{chapter.next.id}}">Next Chapter</a>
+        {% endif %}
+
+        {#% if false and g.user is not none and chapter.story.author_id != g.user.id %}
+            <button id="report">Report Chapter</button>
+        {% endif %#}
+
+        {% if chapter.author_notes is not none %}
+            <br><hr><br>
+            <h2>Author Notes</h2>
+
+            <p id="author-notes">{{chapter.author_notes}}</p>
+
+            <br>
+        {% endif %}
+
+            <hr><br>
+        </section>
+
+        <section id="main"><pre>{{chapter.text}} </pre></section>
+    </main>
+
+    <section id="comments">
+    {% if chapter.story.can_comment %}
+        <form id="new-comment" class="new-comment">
+            <textarea></textarea>
+            <input type="submit" value="Post">
+        </form>
+    {% else %}
+        <div id="new-comment" class="new-comment">
+            Comments have been disabled on this story.
+        </div>
+    {% endif %}
+
+        <div id="comment-list">
+        {% set i = 0 %}
+        {% for comment in chapter.comments|reverse if i < chapter.comments|length %}
+            <div class="comment" data-id="{{comment.id}}">
+                <p>
+                    <a href="/user/{{comment.author.username}}"
+                    >{{comment.author.username}}</a> says...
+                </p>
+
+                <article><pre>{{comment.text}}</pre></article>
+
+                <p><small>posted <time datetime="{{g.format_time(comment.posted)}}"></time>;
+                modified <time datetime="{{g.format_time(comment.modified)}}"></time></small></p>
+
+            {% if comment.replies|length > 0 %}
+                <button>Show Replies</button>
+            {% endif %}
+            </div>
+            
+            {% set i = i + 1 %}
+        {% endfor %}
+        </div>
+
+    {% if chapter.comments|length > 10 %}
+        <button id="more-comments">Show More Comments</button>
+    {% endif %}
+    </section>
+{% endblock content %}
+
+{% block footer %}
+    <script>
+(async () => {
+    await window["markdown"].ready;
+
+    const main = document.getElementById("main");
+    main.innerHTML = window["renderMarkdown"](main.children[0].innerText);
+
+    for (const comment of document.getElementById("comment-list").children) {
+        const article = comment.getElementsByTagName("article")[0];
+        article.innerHTML = window["renderMarkdown"](article.children[0].innerText);
+    }
+    
+    document.body.classList.toggle("cover");
+})();
+    </script>
+
+    <script src="/static/scripts/read.js"></script>
+{% endblock footer %}

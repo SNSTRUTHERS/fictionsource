@@ -1,0 +1,60 @@
+{% if form_id is not defined %}
+    {% set form_id = "image-form" %}
+{% endif %}
+
+{% if form_action is not defined %}
+    {% set form_action = "" %}
+{% endif %}
+
+<form
+    action="{{form_action}}"
+    enctype="multipart/form-data"
+    method="POST"
+    id="{{form_id}}"
+    class="image-form"
+>
+    <h2>Upload Image:</h2>
+
+    <input
+        type="radio"
+        class="url-radio"
+        id="{{form_id}}-url-opt"
+        value="url"
+        name="type"
+        checked
+    >
+    <label for="{{form_id}}-url-opt">From URL</label>
+
+    <input
+        type="radio"
+        class="file-radio"
+        id="{{form_id}}-file-opt"
+        value="file"
+        name="type"
+    >
+    <label for="{{form_id}}-file-opt">From File</label>
+
+    <div class="url-subform" id="{{form_id}}-url-subform">
+        <label for="{{form_id}}-url">Image URL:</label>
+
+        <div class="form-group">
+            <input type="url" id="{{form_id}}-url" name="url">
+        </div>
+    </div>
+
+    <div class="file-subform" id="{{form_id}}-file-subform">
+        <label for="{{form_id}}-file">File:</label>
+        
+        <div class="form-group">
+            <input
+                id="{{form_id}}-file"
+                name="file"
+                accept="image/png, image/jpeg, image/gif, image/webp, image/tiff, image/svg+xml"
+                type="file"
+            >
+        </div>
+    </div>
+
+    <input type="hidden" name="csrf_token" value="{{g.generate_csrf()}}">
+    <input type="submit" value="Submit">
+</form>
