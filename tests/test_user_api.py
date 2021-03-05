@@ -6,11 +6,12 @@ from unittest import TestCase, main
 
 from flask.testing import FlaskClient
 from flask.wrappers import Response
+from flask_bcrypt import generate_password_hash
 
-from models import FollowingUser, connect_db, db, from_timestamp, Story, User
+from models import BCRYPT, connect_db, db, from_timestamp, FollowingUser, Story, User
 from dbcred import get_database_uri
 
-from datetime import date, timezone
+from datetime import date, datetime, timezone
 
 from base64 import b64encode
 
@@ -31,6 +32,35 @@ app.config['SQLALCHEMY_ECHO'] = False
 
 # == TEST CASE =================================================================================== #
 
+USERDATA = (
+    {
+        "username": "testuser",
+        "password": BCRYPT.generate_password_hash("testpass").decode('utf-8'),
+        "description": None,
+        "email": "testuser@gmail.com",
+        "birthdate": date(1997, 3, 16),
+        "joined": datetime(2021, 1, 5, 11, 5, 9, 155000, timezone.utc),
+        "flags": User.Flags.ALLOW_RISQUE
+    },
+    {
+        "username": "testuser2",
+        "password": BCRYPT.generate_password_hash("testpass").decode('utf-8'),
+        "description": None,
+        "email": "testuser2@gmail.com",
+        "birthdate": date(1997, 3, 17),
+        "joined": datetime(2021, 1, 12, 7, 12, 9, 363000, timezone.utc)
+    },
+    {
+        "username": "testuser3",
+        "password": BCRYPT.generate_password_hash("testpass").decode('utf-8'),
+        "description": None,
+        "email": "testuser3@gmail.com",
+        "birthdate": date(1997, 3, 18),
+        "joined": datetime(2021, 1, 25, 3, 22, 18, 796000, timezone.utc),
+        "flags": User.Flags.ALLOW_RISQUE
+    }
+)
+
 class UserAPITestCase(TestCase):
     """Test cases for User API views."""
 
@@ -50,30 +80,11 @@ class UserAPITestCase(TestCase):
         User.query.delete()
 
         self.client = app.test_client()
-        
-        self.testuser = User.register(
-            username = 'testuser',
-            password = 'testuser',
-            email = 'testuser@gmail.com',
-            birthdate = date(1997, 3, 16)
-        )
-        self.testuser.allow_risque = True
 
-        self.testuser2 = User.register(
-            username = 'testuser2',
-            password = 'testuser2',
-            email = 'testuser2@gmail.com',
-            birthdate = date(1997, 3, 17)
-        )
-
-        self.testuser3 = User.register(
-            username = 'testuser3',
-            password = 'testuser3',
-            email = 'testuser3@gmail.com',
-            birthdate = date(1997, 3, 18)
-        )
-        self.testuser3.allow_risque = True
+        users = [ User(**data) for data in USERDATA ]
+        db.session.add_all(users)
         db.session.commit()
+        self.user_ids = [ id for id in map(lambda user: user.id, users) ]
 
     def tearDown(self) -> None:
         super().tearDown()
@@ -94,21 +105,18 @@ class UserAPITestCase(TestCase):
         self.assertIn("Invalid username.", response.json['errors'])
 
         # anonymous/unprivileged user data request
-        response: Response = self.client.get(f"/api/user/{self.testuser.username}")
+        response: Response = self.client.get(f"/api/user/{USERDATA[0]['username']}")
         self.assertEqual(response.json['code'], 200)
         self.assertEqual(response.json['type'], 'success')
 
         data = response.json['data']
-        self.assertEqual(data["username"], self.testuser.username)
-        self.assertEqual(from_timestamp(data['birthdate'], True), self.testuser.birthdate)
-        self.assertEqual(data["description"], self.testuser.description)
-        self.assertEqual(data["image"], self.testuser.image)
-        self.assertEqual(
-            from_timestamp(data['joined']),
-            self.testuser.joined.astimezone(timezone.utc)
-        )
-        self.assertEqual(data['is_moderator'], self.testuser.is_moderator)
-        self.assertEqual(data['allow_risque'], self.testuser.allow_risque)
+        self.assertEqual(data["username"], USERDATA[0]['username'])
+        self.assertEqual(from_timestamp(data['birthdate'], True), USERDATA[0]['birthdate'])
+        self.assertEqual(data["description"], USERDATA[0]['description'])
+        self.assertEqual(data["image"], User.DEFAULT_IMAGE_URI)
+        self.assertEqual(from_timestamp(data['joined']), USERDATA[0]['joined'])
+        self.assertFalse(data['is_moderator'])
+        self.assertEqual(data['allow_risque'], USERDATA[0]['flags'] & User.Flags.ALLOW_RISQUE > 0)
         self.assertEqual(data["stories"], [])
         self.assertEqual(data["following"], [])
         self.assertEqual(data["followed_by"], [])
@@ -117,25 +125,22 @@ class UserAPITestCase(TestCase):
         self.assertNotIn('comments', data)
         
         # priviledged user data request
-        response = self.client.get(f"/api/user/{self.testuser.username}", headers={
+        response = self.client.get(f"/api/user/{USERDATA[0]['username']}", headers={
             "Authorization": self.generate_basicauth_credentials(
-                self.testuser.username, 'testuser'
+                USERDATA[0]['username'], 'testpass'
             )
         })
         self.assertEqual(response.json['code'], 200)
         self.assertEqual(response.json['type'], 'success')
 
         data = response.json['data']
-        self.assertEqual(data["username"], self.testuser.username)
-        self.assertEqual(from_timestamp(data['birthdate'], True), self.testuser.birthdate)
-        self.assertEqual(data["description"], self.testuser.description)
-        self.assertEqual(data["image"], self.testuser.image)
-        self.assertEqual(
-            from_timestamp(data['joined']),
-            self.testuser.joined.astimezone(timezone.utc)
-        )
-        self.assertEqual(data['is_moderator'], self.testuser.is_moderator)
-        self.assertEqual(data['allow_risque'], self.testuser.allow_risque)
+        self.assertEqual(data["username"], USERDATA[0]['username'])
+        self.assertEqual(from_timestamp(data['birthdate'], True), USERDATA[0]['birthdate'])
+        self.assertEqual(data["description"], USERDATA[0]['description'])
+        self.assertEqual(data["image"], User.DEFAULT_IMAGE_URI)
+        self.assertEqual(from_timestamp(data['joined']), USERDATA[0]['joined'])
+        self.assertFalse(data['is_moderator'])
+        self.assertEqual(data['allow_risque'], USERDATA[0]['flags'] & User.Flags.ALLOW_RISQUE > 0)
         self.assertEqual(data["stories"], [])
         self.assertEqual(data["following"], [])
         self.assertEqual(data["followed_by"], [])
@@ -144,22 +149,19 @@ class UserAPITestCase(TestCase):
         self.assertEqual(data["comments"], [])
 
         with self.client.session_transaction() as session:
-            session[CURR_USER_KEY] = self.testuser.id
-        response = self.client.get(f"/api/user/{self.testuser.username}")
+            session[CURR_USER_KEY] = self.user_ids[0]
+        response = self.client.get(f"/api/user/{USERDATA[0]['username']}")
         self.assertEqual(response.json['code'], 200)
         self.assertEqual(response.json['type'], 'success')
 
         data = response.json['data']
-        self.assertEqual(data["username"], self.testuser.username)
-        self.assertEqual(from_timestamp(data['birthdate'], True), self.testuser.birthdate)
-        self.assertEqual(data["description"], self.testuser.description)
-        self.assertEqual(data["image"], self.testuser.image)
-        self.assertEqual(
-            from_timestamp(data['joined']),
-            self.testuser.joined.astimezone(timezone.utc)
-        )
-        self.assertEqual(data['is_moderator'], self.testuser.is_moderator)
-        self.assertEqual(data['allow_risque'], self.testuser.allow_risque)
+        self.assertEqual(data["username"], USERDATA[0]['username'])
+        self.assertEqual(from_timestamp(data['birthdate'], True), USERDATA[0]['birthdate'])
+        self.assertEqual(data["description"], USERDATA[0]['description'])
+        self.assertEqual(data["image"], User.DEFAULT_IMAGE_URI)
+        self.assertEqual(from_timestamp(data['joined']), USERDATA[0]['joined'])
+        self.assertFalse(data['is_moderator'])
+        self.assertEqual(data['allow_risque'], USERDATA[0]['flags'] & User.Flags.ALLOW_RISQUE > 0)
         self.assertEqual(data["stories"], [])
         self.assertEqual(data["following"], [])
         self.assertEqual(data["followed_by"], [])
@@ -189,7 +191,7 @@ class UserAPITestCase(TestCase):
         self.assertEqual(len(response.json['errors']), 1)
         
         with self.client.session_transaction() as session:
-            session[CURR_USER_KEY] = self.testuser2.id
+            session[CURR_USER_KEY] = self.user_ids[1]
 
         # unprivileged user edit request
         response = self.client.patch("/api/user/testuser", json={
@@ -201,7 +203,7 @@ class UserAPITestCase(TestCase):
         self.assertEqual(len(response.json['errors']), 1)
         
         with self.client.session_transaction() as session:
-            session[CURR_USER_KEY] = self.testuser.id
+            session[CURR_USER_KEY] = self.user_ids[0]
 
         # errnoenous privledged user edit requests
         response = self.client.patch("/api/user/testuser", json=[1, 2, 3])
@@ -301,7 +303,7 @@ class UserAPITestCase(TestCase):
         self.assertEqual(len(response.json['errors']), 1)
         
         with self.client.session_transaction() as session:
-            session[CURR_USER_KEY] = self.testuser.id
+            session[CURR_USER_KEY] = self.user_ids[0]
 
         # self-follow request
         response = self.client.post("/api/user/testuser/follow")
@@ -354,7 +356,7 @@ class UserAPITestCase(TestCase):
         self.assertEqual(len(response.json['errors']), 1)
         
         with self.client.session_transaction() as session:
-            session[CURR_USER_KEY] = self.testuser.id
+            session[CURR_USER_KEY] = self.user_ids[0]
 
         # self-unfollow request
         response = self.client.delete("/api/user/testuser/follow")

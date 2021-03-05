@@ -1121,13 +1121,13 @@ class Story(IJsonableModel):
             if type(private) != bool:
                 errors.append("'private' must be a boolean.")
             elif private != self.private:
+                def conv_chapter(c: Chapter):
+                    return (len(filter_text(c.text)) if c.self_visible() else 0) > 0
+
                 if private or (
                     not private and
                     len(self.chapters) > 0 and
-                    all(map(lambda x: len(filter_text(x.text)) > 0, filter(
-                        lambda x: x.visible(ignore_risque=True),
-                        self.chapters
-                    )))
+                    all(map(conv_chapter, self.chapters))
                 ): # only allow public viewing if there's a chapter containing text
                     self.private = private
                     modified = True
@@ -1629,6 +1629,9 @@ class Chapter(IMarkdownModel):
 
         return errors
 
+    def self_visible(self):
+        return not (self.flags & (self.Flags.PRIVATE | self.Flags.PROTECTED))
+
     def visible(self,
         user: Optional[User] = None,
         ignore_risque: bool = False
@@ -1654,7 +1657,7 @@ class Chapter(IMarkdownModel):
         if not self.story.visible(user, ignore_risque):
             return False
 
-        return not (self.flags & (self.Flags.PRIVATE | self.Flags.PROTECTED))
+        return self.self_visible()
 
     @property
     def private(self) -> bool:

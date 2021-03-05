@@ -732,7 +732,7 @@ def api_search():
     """API entrypoint for query-based search."""
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.")
+        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
 
     try:
         results = SearchResults(
@@ -845,7 +845,10 @@ def new_story():
     """Creates a new story."""
 
     if g.user is None:
-        return make_error_response("Must be logged in to post a new comment.", code=401)
+        return make_error_response("Must be logged in to post a new story.", code=401)
+
+    if type(request.json) != dict:
+        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
     
     try:
         story = Story.new(
@@ -884,7 +887,7 @@ def update_story(story_id: int):
         return make_error_response("Insufficient credentials.", code=401)
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.")
+        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
     
     errors = story.update(
         title       = request.json.get("title"),
@@ -948,7 +951,7 @@ def add_tags(story_id: int):
         return make_error_response("Insufficient credentials.", code=401)
 
     if type(request.json) != list:
-        return make_error_response(f"Expected list; got {type(request.json).__name__}.")
+        return make_error_response(f"Expected list; got {type(request.json).__name__}.", code=400)
 
     tags = []
     errors = []
@@ -993,7 +996,7 @@ def remove_tags(story_id: int):
         return make_error_response("Insufficient credentials.", code=401)
 
     if type(request.json) != list:
-        return make_error_response(f"Expected list; got {type(request.json).__name__}.")
+        return make_error_response(f"Expected list; got {type(request.json).__name__}.", code=400)
 
     tags = []
     errors = []
@@ -1113,7 +1116,7 @@ def new_chapter(story_id: int):
         return make_error_response("Invalid story ID.")
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.")
+        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
     
     try:
         chapter = Chapter.new(
@@ -1180,7 +1183,7 @@ def update_chapter(chapter_id: int):
         return make_error_response("Insufficient credentials.", code=401)
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.")
+        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
 
     errors = chapter.update(
         name         = request.json.get("name"),
@@ -1275,7 +1278,7 @@ def new_chapter_comment(chapter_id: int):
         return make_error_response("Invalid chapter ID.")
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.")
+        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
 
     try:
         comment = Comment.new(
@@ -1396,7 +1399,7 @@ def new_comment_reply(comment_id: int):
         return make_error_response("Invalid comment ID.")
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.")
+        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
 
     try:
         reply = Comment.new(
@@ -1420,7 +1423,7 @@ def tag_search():
     count = 25
 
     if type(request.json) != dict:
-        errors.append(f"Expected dict; got {type(request.json).__name__}.")
+        errors.append(f"Expected dict; got {type(request.json).__name__}.", code=400)
     
     if "tag" not in request.json:
         errors.append("Missing required argument 'tag'.")

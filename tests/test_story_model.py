@@ -7,7 +7,7 @@ from unittest import TestCase, main
 from models import Chapter, connect_db, db, User, Story
 from dbcred import get_database_uri
 
-from datetime import date
+from datetime import date, datetime
 
 from app import app
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
@@ -356,6 +356,8 @@ class StoryModelTestCase(TestCase):
         self.assertEqual(story.summary, "foobar")
         self.assertEqual(len(story.update(summary=" hello     world !  ")), 0)
         self.assertEqual(story.summary, "hello world !")
+        self.assertEqual(len(story.update(summary="  ")), 0)
+        self.assertEqual(story.summary, "")
 
 if __name__ == "__main__":
     from sys import argv
