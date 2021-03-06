@@ -6,7 +6,9 @@ from unittest import TestCase, main
 
 from flask.wrappers import Response
 
-from models import BCRYPT, connect_db, db, from_timestamp, Chapter, Story, User
+from models import (
+    BCRYPT, connect_db, db, FavoriteStory, FollowingStory, from_timestamp, Chapter, Story, User
+)
 from dbcred import get_database_uri
 
 from datetime import date, datetime, timezone
@@ -156,6 +158,8 @@ class StoryAPITestCase(TestCase):
     def setUp(self) -> None:
         super().setUp()
 
+        FavoriteStory.query.delete()
+        FollowingStory.query.delete()
         Chapter.query.delete()
         Story.query.delete()
         User.query.delete()
@@ -572,6 +576,146 @@ class StoryAPITestCase(TestCase):
         self.assertEqual(response.json['code'], 404)
         self.assertEqual(response.json['type'], 'error')
         self.assertIn("Invalid story ID.", response.json['errors'])
+
+    def _test_fav_fol_base(self, action: str = "favorite"):
+        """Tests for favoriting/following a story."""
+
+        lst = "favorite_stories" if action == "favorite" else "followed_stories"
+        actioned = action + ('d' if action.endswith('e') else 'ed')
+
+        # anonymous story favorite request
+        for id in (self.story_ids[0], 1444):
+            response = self.client.post(f"/api/story/{id}/{action}")
+            self.assertEqual(response.json['code'], 401)
+            self.assertEqual(response.json['type'], 'error')
+            self.assertIn(
+                f"Must be logged in to {action} a story.",
+                response.json['errors']
+            )
+
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[0]
+
+        # nonexistant/private story favorite request
+        for id in (self.story_ids[1], 1444):
+            response = self.client.post(f"/api/story/{id}/{action}")
+            self.assertEqual(response.json['code'], 404)
+            self.assertEqual(response.json['type'], 'error')
+            self.assertIn("Invalid story ID.", response.json['errors'])
+        
+        # story self-favorite request
+        response: Response = self.client.post(f"/api/story/{self.story_ids[0]}/{action}")
+        self.assertEqual(response.json['code'], 403)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn(f"Cannot {action} your own story.", response.json['errors'])
+
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[1]
+        
+        # valid story favorite request
+        response = self.client.post(f"/api/story/{self.story_ids[0]}/{action}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        response = self.client.get(f"/api/user/{USERDATA[1]['username']}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+        self.assertIn(self.story_ids[0], response.json['data'][lst])
+        self.assertNotIn(self.story_ids[1], response.json['data'][lst])
+        self.assertNotIn(self.story_ids[2], response.json['data'][lst])
+
+        # story refavorite request
+        response = self.client.post(f"/api/story/{self.story_ids[0]}/{action}")
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn(f"You already {actioned} this story.", response.json['errors'])
+
+        # risque story favorite request for filtered user
+        response = self.client.post(f"/api/story/{self.story_ids[2]}/{action}")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid story ID.", response.json['errors'])
+
+    def _test_unfav_unfol_base(self, action: str = "favorite"):
+        """Tests for unfavoriting/unfollowing a story."""
+
+        lst = "favorite_stories" if action == "favorite" else "followed_stories"
+        unaction = "un" + action
+        actioned = action + ('d' if action.endswith('e') else 'ed')
+
+        # anonymous story favorite request
+        for id in (self.story_ids[0], 1444):
+            response = self.client.delete(f"/api/story/{id}/{action}")
+            self.assertEqual(response.json['code'], 401)
+            self.assertEqual(response.json['type'], 'error')
+            self.assertIn(
+                f"Must be logged in to {unaction} a story.",
+                response.json['errors']
+            )
+
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[0]
+
+        # nonexistant/private story favorite request
+        for id in (self.story_ids[1], 1444):
+            response = self.client.delete(f"/api/story/{id}/{action}")
+            self.assertEqual(response.json['code'], 404)
+            self.assertEqual(response.json['type'], 'error')
+            self.assertIn("Invalid story ID.", response.json['errors'])
+        
+        # story self-favorite request
+        response: Response = self.client.delete(f"/api/story/{self.story_ids[0]}/{action}")
+        self.assertEqual(response.json['code'], 403)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn(f"Cannot {unaction} your own story.", response.json['errors'])
+
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[1]
+        
+        # valid story favorite request
+        response = self.client.post(f"/api/story/{self.story_ids[0]}/{action}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+        response = self.client.delete(f"/api/story/{self.story_ids[0]}/{action}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        response = self.client.get(f"/api/user/{USERDATA[1]['username']}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+        self.assertEqual(response.json['data'][lst], [])
+
+        # story refavorite request
+        response = self.client.delete(f"/api/story/{self.story_ids[0]}/{action}")
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn(f"You haven't {actioned} this story.", response.json['errors'])
+
+        # risque story favorite request for filtered user
+        response = self.client.delete(f"/api/story/{self.story_ids[2]}/{action}")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid story ID.", response.json['errors'])
+
+    def test_favorite(self) -> None:
+        """Tests favoriting a story."""
+
+        self._test_fav_fol_base()
+
+    def test_unfavorite(self) -> None:
+        """Tests unfavoriting a story."""
+
+        self._test_unfav_unfol_base()
+
+    def test_follow(self) -> None:
+        """Tests following a story."""
+
+        self._test_fav_fol_base("follow")
+
+    def test_unfollow(self) -> None:
+        """Tests unfollowing a story."""
+
+        self._test_unfav_unfol_base("follow")
 
 if __name__ == "__main__":
     from sys import argv
