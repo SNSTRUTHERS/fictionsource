@@ -6,7 +6,7 @@ from unittest import TestCase, main
 
 from flask.wrappers import Response
 
-from models import BCRYPT, connect_db, db, from_timestamp, User, Story, Chapter
+from models import BCRYPT, connect_db, db, from_timestamp, Chapter, Story, User
 from dbcred import get_database_uri
 
 from datetime import date, datetime, timezone
@@ -159,8 +159,6 @@ class StoryAPITestCase(TestCase):
         Chapter.query.delete()
         Story.query.delete()
         User.query.delete()
-
-        self.client = app.test_client()
 
         users = [ User(**data) for data in USERDATA ]
         db.session.add_all(users)
