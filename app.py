@@ -49,6 +49,19 @@ if app.config['SQLALCHEMY_DATABASE_URI'] is None:
         save = False
     )
 
+def to_jsontype(t: type):
+    """Converts a Python type to a string."""
+
+    return {
+        "NoneType": "null",
+        "bool": "boolean",
+        "str": "string",
+        "int": "integer",
+        "float": "float",
+        "list": "list",
+        "dict": "object"
+    }.get(t.__name__, t.__name__.lower())
+
 # ---- Search engine ----------------------------------------------------------------------------- #
 
 from search import *
@@ -732,7 +745,10 @@ def api_search():
     """API entrypoint for query-based search."""
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected object; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
 
     try:
         results = SearchResults(
@@ -781,7 +797,10 @@ def update_user(username: str):
         return make_error_response("Insufficient credentials.", code=401)
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected object; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
 
     errors = user.update(
         image        = request.json.get("image"),
@@ -848,7 +867,10 @@ def new_story():
         return make_error_response("Must be logged in to post a new story.", code=401)
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected object; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
     
     try:
         story = Story.new(
@@ -887,7 +909,17 @@ def update_story(story_id: int):
         return make_error_response("Insufficient credentials.", code=401)
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected object; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
+    
+    is_risque = None
+    if "is_risque" in request.json:
+        if type(request.json['is_risque']) == bool:
+            is_risque = request.json['is_risque'] if g.user.allow_risque else False
+        else:
+            is_risque = request.json['is_risque']
     
     errors = story.update(
         title       = request.json.get("title"),
@@ -896,10 +928,7 @@ def update_story(story_id: int):
         private     = request.json.get("private"),
         protected   = request.json.get("protected"),
         can_comment = request.json.get("can_comment"),
-        is_risque   = (
-            request.json["is_risque"] and g.user.allow_risque
-            if "is_risque" in request.json else None
-        )
+        is_risque   = is_risque
     )
 
     if len(errors) > 0:
@@ -951,7 +980,10 @@ def add_tags(story_id: int):
         return make_error_response("Insufficient credentials.", code=401)
 
     if type(request.json) != list:
-        return make_error_response(f"Expected list; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected list; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
 
     tags = []
     errors = []
@@ -996,7 +1028,10 @@ def remove_tags(story_id: int):
         return make_error_response("Insufficient credentials.", code=401)
 
     if type(request.json) != list:
-        return make_error_response(f"Expected list; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected list; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
 
     tags = []
     errors = []
@@ -1116,7 +1151,10 @@ def new_chapter(story_id: int):
         return make_error_response("Invalid story ID.")
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected object; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
     
     try:
         chapter = Chapter.new(
@@ -1183,7 +1221,10 @@ def update_chapter(chapter_id: int):
         return make_error_response("Insufficient credentials.", code=401)
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected object; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
 
     errors = chapter.update(
         name         = request.json.get("name"),
@@ -1278,7 +1319,10 @@ def new_chapter_comment(chapter_id: int):
         return make_error_response("Invalid chapter ID.")
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected object; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
 
     try:
         comment = Comment.new(
@@ -1399,7 +1443,10 @@ def new_comment_reply(comment_id: int):
         return make_error_response("Invalid comment ID.")
 
     if type(request.json) != dict:
-        return make_error_response(f"Expected dict; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected object; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
 
     try:
         reply = Comment.new(
@@ -1423,7 +1470,10 @@ def tag_search():
     count = 25
 
     if type(request.json) != dict:
-        errors.append(f"Expected dict; got {type(request.json).__name__}.", code=400)
+        return make_error_response(
+            f"Expected object; got {to_jsontype(type(request.json))}.",
+            code = 400
+        )
     
     if "tag" not in request.json:
         errors.append("Missing required argument 'tag'.")

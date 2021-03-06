@@ -209,7 +209,7 @@ class UserAPITestCase(TestCase):
         response = self.client.patch("/api/user/testuser", json=[1, 2, 3])
         self.assertEqual(response.json['code'], 400)
         self.assertEqual(response.json['type'], 'error')
-        self.assertIn("Expected dict; got list.", response.json['errors'])
+        self.assertIn("Expected object; got list.", response.json['errors'])
         self.assertEqual(len(response.json['errors']), 1)
 
         response = self.client.patch("/api/user/testuser", json={

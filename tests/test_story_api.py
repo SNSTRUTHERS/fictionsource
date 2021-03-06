@@ -6,7 +6,7 @@ from unittest import TestCase, main
 
 from flask.wrappers import Response
 
-from models import BCRYPT, connect_db, db, from_timestamp, User, Story, Chapter, Tag
+from models import BCRYPT, connect_db, db, from_timestamp, User, Story, Chapter
 from dbcred import get_database_uri
 
 from datetime import date, datetime, timezone
@@ -156,7 +156,6 @@ class StoryAPITestCase(TestCase):
     def setUp(self) -> None:
         super().setUp()
 
-        Tag.query.delete()
         Chapter.query.delete()
         Story.query.delete()
         User.query.delete()
@@ -337,17 +336,17 @@ class StoryAPITestCase(TestCase):
         response = self.client.post("/api/story", json="hello world")
         self.assertEqual(response.json['code'], 400)
         self.assertEqual(response.json['type'], 'error')
-        self.assertIn("Expected dict; got str.", response.json['errors'])
+        self.assertIn("Expected object; got string.", response.json['errors'])
         
         response = self.client.post("/api/story", json=144)
         self.assertEqual(response.json['code'], 400)
         self.assertEqual(response.json['type'], 'error')
-        self.assertIn("Expected dict; got int.", response.json['errors'])
+        self.assertIn("Expected object; got integer.", response.json['errors'])
         
         response = self.client.post("/api/story", json=["hello world", "make me a story dammit"])
         self.assertEqual(response.json['code'], 400)
         self.assertEqual(response.json['type'], 'error')
-        self.assertIn("Expected dict; got list.", response.json['errors'])
+        self.assertIn("Expected object; got list.", response.json['errors'])
         
         # privileged story create request with invalid parameters
         response = self.client.post("/api/story", json={
@@ -427,11 +426,154 @@ class StoryAPITestCase(TestCase):
     def test_patch(self) -> None:
         """Tests updating an existing story."""
 
+        # anonymous story patch request
+        for id in (self.story_ids[0], 1444):
+            response = self.client.patch(f"/api/story/{id}")
+            self.assertEqual(response.json['code'], 401)
+            self.assertEqual(response.json['type'], 'error')
+            self.assertIn("Must be logged in to update an existing story.", response.json['errors'])
+
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[0]
+
+        # nonexistant story patch request
+        response: Response = self.client.patch("/api/story/1444")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid story ID.", response.json['errors'])
+
+        # unprivleged private story patch request
+        response = self.client.patch(f"/api/story/{self.story_ids[1]}")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid story ID.", response.json['errors'])
+
+        # unprivleged public story patch request
+        response = self.client.patch(f"/api/story/{self.story_ids[2]}")
+        self.assertEqual(response.json['code'], 401)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Insufficient credentials.", response.json['errors'])
+
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[2]
+
+        # privleged story patch request with invalid body
+        response = self.client.patch(f"/api/story/{self.story_ids[2]}")
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Expected object; got null.", response.json['errors'])
+        
+        response = self.client.patch(f"/api/story/{self.story_ids[2]}", json=55)
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Expected object; got integer.", response.json['errors'])
+        
+        response = self.client.patch(f"/api/story/{self.story_ids[2]}", json=[1, 2])
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Expected object; got list.", response.json['errors'])
+        
+        # privileged story patch request with invalid parameters
+        response = self.client.patch(f"/api/story/{self.story_ids[2]}", json={
+            "title": 55,
+            "thumbnail": False,
+            "can_comment": 1
+        })
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("'title' must be a string.", response.json['errors'])
+        self.assertIn("'thumbnail' must be a string.", response.json['errors'])
+        self.assertIn("'can_comment' must be a boolean.", response.json['errors'])
+        
+        response = self.client.patch(f"/api/story/{self.story_ids[2]}", json={
+            "title": "   ",
+            "private": False,
+            "can_comment": "abc",
+            "is_risque": 55
+        })
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn(
+            "'title' must contain at least one non-whitespace character.",
+            response.json['errors']
+        )
+        self.assertIn("'can_comment' must be a boolean.", response.json['errors'])
+        self.assertIn("'is_risque' must be a boolean.", response.json['errors'])
+        self.assertTrue(all(map(lambda s: 'private' not in s, response.json['errors'])))
+
+        # privileged story patch request with valid parameters
+        response = self.client.patch(f"/api/story/{self.story_ids[2]}", json={
+            "title": "Hello   world  ",
+            "is_risque": False
+        })
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        response = self.client.get(f"/api/story/{self.story_ids[2]}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+        self.assertEqual(response.json['data']['title'], "Hello world")
+        self.assertEqual(response.json['data']['is_risque'], False)
+
+        # privileged story patch request with attempt to modify is_risque for user
+        # that filters out risque content
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[1]
+        
+        response = self.client.patch(f"/api/story/{self.story_ids[1]}", json={
+            "is_risque": True
+        })
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        response = self.client.get(f"/api/story/{self.story_ids[2]}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+        self.assertEqual(response.json['data']['is_risque'], False)
+
     def test_delete(self) -> None:
         """Tests deleting an existing story."""
 
-    def test_get_tags(self) -> None:
-        """Tests retrieving a story's list of tags."""
+        # anonymous story delete request
+        for id in (self.story_ids[0], 1444):
+            response = self.client.delete(f"/api/story/{id}")
+            self.assertEqual(response.json['code'], 401)
+            self.assertEqual(response.json['type'], 'error')
+            self.assertIn(
+                "Must be logged in to delete an existing story.",
+                response.json['errors']
+            )
+
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[0]
+
+        # nonexistant story delete request
+        response: Response = self.client.delete("/api/story/1444")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid story ID.", response.json['errors'])
+
+        # unprivleged private story delete request
+        response = self.client.delete(f"/api/story/{self.story_ids[1]}")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid story ID.", response.json['errors'])
+
+        # unprivleged public story delete request
+        response = self.client.delete(f"/api/story/{self.story_ids[2]}")
+        self.assertEqual(response.json['code'], 401)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Insufficient credentials.", response.json['errors'])
+
+        # privleged story delete request
+        response = self.client.delete(f"/api/story/{self.story_ids[0]}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        response = self.client.get(f"/api/story/{self.story_ids[0]}")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid story ID.", response.json['errors'])
 
 if __name__ == "__main__":
     from sys import argv
