@@ -443,7 +443,7 @@ class ChapterAPITestCase(TestCase):
 
         # privleged chapter edit request with valid parameters
         response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json={
-            "name": "   ABCDEFG ",
+            "name": "   ABCD   EFG ",
             "author_notes": "Hello"
         })
         self.assertEqual(response.json['code'], 200)
@@ -452,7 +452,7 @@ class ChapterAPITestCase(TestCase):
         response = self.client.get(f"/api/chapter/{self.chapter_ids[0]}")
         self.assertEqual(response.json['code'], 200)
         self.assertEqual(response.json['type'], 'success')
-        self.assertEqual(response.json['data']['name'], "ABCDEFG")
+        self.assertEqual(response.json['data']['name'], "ABCD EFG")
         self.assertEqual(response.json['data']['author_notes'], "Hello")
         
         response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json={
