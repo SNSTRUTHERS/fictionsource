@@ -382,6 +382,119 @@ class ChapterAPITestCase(TestCase):
     def test_patch(self) -> None:
         """Tests modifying an existing chapter."""
 
+        # anonymous chapter edit request
+        for id in (1447, self.chapter_ids[1]):
+            response = self.client.patch(f"/api/chapter/{id}")
+            self.assertEqual(response.json['code'], 401)
+            self.assertEqual(response.json['type'], 'error')
+            self.assertIn(
+                "Must be logged in to update an existing chapter.",
+                response.json['errors']
+            )
+
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[0]
+
+        # unprivleged chapter edit request for private chapter
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[2]}")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid chapter ID.", response.json['errors'])
+
+        # unprivleged chapter edit request for public chapter
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[4]}")
+        self.assertEqual(response.json['code'], 401)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Insufficient credentials.", response.json['errors'])
+
+        # privleged chapter edit request with invalid body
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json=-15.77)
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Expected object; got float.", response.json['errors'])
+        
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json=False)
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Expected object; got boolean.", response.json['errors'])
+
+        # privleged chapter edit request with invalid parameters
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json={
+            "name": 55,
+            "author_notes": False,
+            "index": {}
+        })
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("'name' must be a string.", response.json['errors'])
+        self.assertIn("'author_notes' must be a string.", response.json['errors'])
+        self.assertIn("'index' must be an integer.", response.json['errors'])
+        
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json={
+            "text": ["line 1", "line 2"],
+            "index": 6,
+            "private": 9
+        })
+        self.assertEqual(response.json['code'], 400)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("'text' must be a string.", response.json['errors'])
+        self.assertIn("'index' out of range.", response.json['errors'])
+        self.assertIn("'private' must be a boolean.", response.json['errors'])
+
+        # privleged chapter edit request with valid parameters
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json={
+            "name": "   ABCDEFG ",
+            "author_notes": "Hello"
+        })
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        response = self.client.get(f"/api/chapter/{self.chapter_ids[0]}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+        self.assertEqual(response.json['data']['name'], "ABCDEFG")
+        self.assertEqual(response.json['data']['author_notes'], "Hello")
+        
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json={
+            "name": "  ",
+            "author_notes": "",
+            "text": "ABC"
+        })
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        response = self.client.get(f"/api/chapter/{self.chapter_ids[0]}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+        self.assertIsNone(response.json['data']['name'])
+        self.assertIsNone(response.json['data']['author_notes'])
+        self.assertEqual(response.json['data']['text'], 'ABC')
+        
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json={
+            "index": 1,
+            "text": "   "
+        })
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        response = self.client.get(f"/api/chapter/{self.chapter_ids[0]}")
+        self.assertEqual(response.json['data']['text'], "")
+        self.assertEqual(response.json['data']['index'], 1)
+        self.assertEqual(response.json['data']['private'], True)
+        self.assertEqual(
+            self.client.get(f"/api/chapter/{self.chapter_ids[1]}").json['data']['index'],
+            0
+        )
+        
+        response = self.client.patch(f"/api/chapter/{self.chapter_ids[0]}", json={
+            "private": False
+        })
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+        self.assertTrue(
+            self.client.get(f"/api/chapter/{self.chapter_ids[0]}").json['data']['private']
+        )
+
     def test_delete(self) -> None:
         """Tests deleting an existing chapter."""
 
