@@ -1384,7 +1384,7 @@ class Chapter(IMarkdownModel):
 
     flags: Flags = db.Column(db.Integer,
         nullable = False,
-        default  = Flags.PRIVATE
+        default  = Flags.DEFAULT
     )
 
     posted: datetime.datetime = db.Column(db.DateTime,
