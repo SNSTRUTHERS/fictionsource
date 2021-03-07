@@ -1150,6 +1150,9 @@ def new_chapter(story_id: int):
     if story is None or not story.visible(g.user):
         return make_error_response("Invalid story ID.")
 
+    if story.author_id != g.user.id:
+        return make_error_response("Insufficient credentials.", code=401)
+
     if type(request.json) != dict:
         return make_error_response(
             f"Expected object; got {to_jsontype(type(request.json))}.",
@@ -1191,7 +1194,10 @@ def list_chapters(story_id: int):
     chapters = story.chapters
 
     return make_success_response([
-        chapter.to_json(g.user) for chapter in chapters[offset:count]
+        chapter.to_json(g.user) for chapter in filter(
+            lambda c: c.visible(g.user),
+            chapters[offset:count]
+        )
     ])
     
 # ---- Chapter routes ---------------------------------------------------------------------------- #
