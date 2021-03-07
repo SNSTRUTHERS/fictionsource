@@ -1,59 +1,63 @@
+from flask_bcrypt import generate_password_hash
 from models import *
+from datetime import date, datetime, timezone
 
 def seed_db(db: SQLAlchemy) -> None:
     """Seeds the database with a predetermined data set."""
+
+    GEN_PASSW = lambda s: generate_password_hash(s).decode("utf-8")
     
     # Add users
     users = (
-        User.register(
-            "simondoesficsrc",
-            "seemeafterdinner",
-            "snstruthers@gmail.com",
-            datetime.date(2000, 2, 15)
+        User(
+            username   = "simondoesficsrc",
+            password   = GEN_PASSW("seemeafterdinner"),
+            email      = "snstruthers@gmail.com",
+            birthdate  = date(2000, 2, 15),
+            joined     = datetime(
+                year   = 2020,
+                month  = 12,
+                day    = 5,
+                hour   = 11,
+                minute = 44,
+                second = 15,
+                tzinfo = timezone.utc
+            ),
+            flags      = User.Flags.ALLOW_RISQUE
         ),
-        User.register(
-            "seen6",
-            "abcdef",
-            "test2@gmail.com",
-            datetime.date(1999, 6, 24)
+        User(
+            username   = "seen6",
+            password   = GEN_PASSW("abcdef"),
+            email      = "test2@gmail.com",
+            birthdate  = date(1999, 6, 24),
+            joined     = datetime(
+                year   = 2020,
+                month  = 12,
+                day    = 17,
+                hour   = 8,
+                minute = 12,
+                second = 54,
+                tzinfo = timezone.utc
+            ),
+            flags      = User.Flags.ALLOW_RISQUE
         ),
-        User.register(
-            "chicago94",
-            "hello_world",
-            "test@gmail.com",
-            datetime.date(1994, 12, 1)
+        User(
+            username   = "chicago94",
+            password   = GEN_PASSW("hello_world"),
+            email      = "test@gmail.com",
+            birthdate  = date(1994, 12, 1),
+            joined     = datetime(
+                year   = 2020,
+                month  = 12,
+                day    = 15,
+                hour   = 17,
+                minute = 6,
+                second = 3,
+                tzinfo = timezone.utc
+            )
         )
     )
-
-    users[0].joined = datetime.datetime(
-        year = 2020,
-        month = 12,
-        day = 5,
-        hour = 11,
-        minute = 44,
-        second = 15,
-        tzinfo = datetime.timezone.utc
-    )
-    users[0].allow_risque = True
-    users[1].joined = datetime.datetime(
-        year = 2020,
-        month = 12,
-        day = 17,
-        hour = 8,
-        minute = 12,
-        second = 54,
-        tzinfo = datetime.timezone.utc
-    )
-    users[1].allow_risque = True
-    users[2].joined = datetime.datetime(
-        year = 2020,
-        month = 12,
-        day = 15,
-        hour = 17,
-        minute = 6,
-        second = 3,
-        tzinfo = datetime.timezone.utc
-    )
+    db.session.add_all(users)
     db.session.commit()
 
     # Add tags
@@ -151,30 +155,30 @@ def seed_db(db: SQLAlchemy) -> None:
     # Add stories
     stories = (
         Story(
-            author_id = users[0].id,
-            title = "The Youth Revolution",
-            posted = datetime.datetime(
-                year = 2020,
-                month = 12,
-                day = 29,
-                hour = 16,
+            author_id  = users[0].id,
+            title      = "The Youth Revolution",
+            posted     = datetime(
+                year   = 2020,
+                month  = 12,
+                day    = 29,
+                hour   = 16,
                 minute = 3,
                 second = 6,
-                tzinfo = datetime.timezone.utc,
+                tzinfo = timezone.utc,
             ),
-            modified = datetime.datetime(
-                year = 2020,
-                month = 12,
-                day = 29,
-                hour = 16,
+            modified   = datetime(
+                year   = 2020,
+                month  = 12,
+                day    = 29,
+                hour   = 16,
                 minute = 3,
                 second = 6,
-                tzinfo = datetime.timezone.utc
+                tzinfo = timezone.utc
             ),
             summary = "A young, naive, and upstart politician with high ambitions " +
                 "runs for president and is dealt an uphill battle and a swift dose " +
                 "of reality.",
-            flags = Story.Flags(Story.Flags.DEFAULT)
+            flags = Story.Flags.DEFAULT
         ),
     )
 
@@ -238,9 +242,8 @@ gravida massa, vitae mollis diam.
         Chapter.new(stories[0], "The Campaign Begins")
     )
 
-    chapters[0].update(private=False, protected=False)
-    chapters[2].update(private=False, protected=False)
-    stories[0].update(private=False, protected=False)
+    chapters[0].update(private=False)
+    stories[0].update(private=False)
 
     # Add comments
     c1 = Comment.new(users[1], "Hello world!", chapters[0])
