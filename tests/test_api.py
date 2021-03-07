@@ -4,32 +4,154 @@
 
 from unittest import TestCase, main
 
-from flask.testing import FlaskClient
 from flask.wrappers import Response
 
-from models import connect_db, db, User
+from models import BCRYPT, Chapter, connect_db, db, Story, User
 from dbcred import get_database_uri
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 from base64 import b64encode
 
 from app import CURR_USER_KEY, app
-app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
-    "fictionsource-test",
-    cred_file = ".dbtestcred",
-    save = False
+
+# == TEST CASE =================================================================================== #
+
+USERDATA = (
+    {
+        "username": "testuser",
+        "password": BCRYPT.generate_password_hash("testpass").decode('utf-8'),
+        "description": None,
+        "email": "testuser@gmail.com",
+        "birthdate": date(1997, 3, 16),
+        "joined": datetime(2021, 1, 5, 11, 5, 9, 155000, timezone.utc),
+        "flags": User.Flags.ALLOW_RISQUE
+    },
+    {
+        "username": "testuser2",
+        "password": BCRYPT.generate_password_hash("testpass").decode('utf-8'),
+        "description": None,
+        "email": "testuser2@gmail.com",
+        "birthdate": date(1997, 3, 17),
+        "joined": datetime(2021, 1, 12, 7, 12, 9, 363000, timezone.utc)
+    },
+    {
+        "username": "testuser3",
+        "password": BCRYPT.generate_password_hash("testpass").decode('utf-8'),
+        "description": None,
+        "email": "testuser3@gmail.com",
+        "birthdate": date(1997, 3, 18),
+        "joined": datetime(2021, 1, 25, 3, 22, 18, 796000, timezone.utc),
+        "flags": User.Flags.ALLOW_RISQUE
+    }
 )
-if app.config['SQLALCHEMY_DATABASE_URI'] is None:
-    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
-        "fictionsource-test",
-        cred_file = None,
-        save = False
-    )
 
-app.config['SQLALCHEMY_ECHO'] = False
+STORYDATA = (
+    {
+        "title": "Test Story",
+        "summary": "This is a Simon test :^)",
+        "posted": datetime(2021, 2, 5, 15, 24, 11, 234000, timezone.utc),
+        "modified": datetime(2021, 2, 5, 15, 24, 11, 234000, timezone.utc),
+        "flags": Story.Flags.CAN_COMMENT
+    },
+    {
+        "title": "Test Story",
+        "summary": "This is a Simon test :^)",
+        "posted": datetime(2021, 2, 8, 11, 56, 11, 411000, timezone.utc),
+        "modified": datetime(2021, 2, 8, 11, 56, 11, 411000, timezone.utc),
+        "flags": Story.Flags.CAN_COMMENT | Story.Flags.PRIVATE
+    },
+    {
+        "title": "Unsafe for Work Story",
+        "summary": "How scandalous!! *shocked face*",
+        "posted": datetime(2021, 2, 9, 4, 24, 11, 911000, timezone.utc),
+        "modified": datetime(2021, 2, 9, 5, 11, 55, 911000, timezone.utc),
+        "flags": Story.Flags.IS_RISQUE
+    }
+)
 
-class UserAPITestCase(TestCase):
+CHAPTERDATA1 = (
+    {
+        "name": None,
+        "text": "Hello **world**! I'm a test chapter's text contents! Wheeeeee",
+        "author_notes": "Just explainin what this is.",
+        "posted":   STORYDATA[0]['posted'],
+        "modified": STORYDATA[0]['modified'],
+        "flags": Chapter.Flags(0)
+    },
+    {
+        "name": "Chapter 2",
+        "text": "More text lol",
+        "author_notes": None,
+        "posted":   STORYDATA[0]['posted'],
+        "modified": STORYDATA[0]['modified'],
+        "flags": Chapter.Flags(0),
+        "index": 1
+    }
+)
+
+CHAPTERDATA2 = (
+    {
+        "name": None,
+        "text": "Hello",
+        "author_notes": None,
+        "posted":   STORYDATA[1]['posted'],
+        "modified": STORYDATA[1]['modified'],
+        "flags": Chapter.Flags(0),
+        "index": 1
+    },
+    {
+        "name": "Blank Chapter",
+        "text": "# \n**",
+        "author_notes": None,
+        "posted":   STORYDATA[1]['posted'],
+        "modified": STORYDATA[1]['modified'],
+        "index": 0
+    }
+)
+
+CHAPTERDATA3 = (
+    {
+        "name": None,
+        "text": "<insert risque content here lol>",
+        "author_notes": None,
+        "posted":   STORYDATA[2]['posted'],
+        "modified": STORYDATA[2]['modified'],
+        "flags": Chapter.Flags(0)
+    },
+    {
+        "name": "Private Chapter",
+        "text": "# Heading\n*Hello I have stuff in me yay*",
+        "author_notes": None,
+        "posted":   STORYDATA[2]['posted'],
+        "modified": STORYDATA[2]['modified'],
+        "index": 1
+    }
+)
+
+def generate_basicauth_credentials(username: str, password: str) -> str:
+    """Generates Basic Authorization HTTP header data.
+    
+    Parameters
+    ==========
+    username: `str`
+        The username to log in with.
+
+    password: `str`
+        The password to log in with.
+
+    Returns
+    =======
+    `str`
+        String to place in as the value of an Authorization request header.
+    """
+
+    credentials = b64encode(bytes(f'{username}:{password}', 'utf-8'))
+    return "Basic " + credentials.decode('utf-8')
+
+# == TEST CASES ================================================================================== #
+
+class GeneralAPITestCase(TestCase):
     """Test cases for general API functionality."""
 
     @classmethod
@@ -53,11 +175,6 @@ class UserAPITestCase(TestCase):
             email = 'testuser@gmail.com',
             birthdate = date(1997, 3, 16)
         )
-
-    @staticmethod
-    def generate_basicauth_credentials(username: str, password: str):
-        credentials = b64encode(bytes(f'{username}:{password}', 'utf-8')).decode('utf-8')
-        return f"Basic {credentials}"
 
     def test_structure(self):
         """Tests the structure of API responses."""
@@ -83,7 +200,7 @@ class UserAPITestCase(TestCase):
 
         # bad credentials
         response = self.client.get("/api/", headers={
-            "Authorization": self.generate_basicauth_credentials(
+            "Authorization": generate_basicauth_credentials(
                 self.testuser.username, 'abcdef'
             )
         })
@@ -92,7 +209,7 @@ class UserAPITestCase(TestCase):
 
         # valid credentials
         response = self.client.get("/api/", headers={
-            "Authorization": self.generate_basicauth_credentials(
+            "Authorization": generate_basicauth_credentials(
                 self.testuser.username, 'testuser'
             )
         })
@@ -113,6 +230,19 @@ class UserAPITestCase(TestCase):
 
 if __name__ == "__main__":
     from sys import argv
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
+        "fictionsource-test",
+        cred_file = ".dbtestcred",
+        save = False
+    )
+    if app.config['SQLALCHEMY_DATABASE_URI'] is None:
+        app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
+            "fictionsource-test",
+            cred_file = None,
+            save = False
+        )
+    app.config['SQLALCHEMY_ECHO'] = False
 
     if len(argv) > 1:
         app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(

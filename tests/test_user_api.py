@@ -4,65 +4,19 @@
 
 from unittest import TestCase, main
 
-from flask.testing import FlaskClient
 from flask.wrappers import Response
-from flask_bcrypt import generate_password_hash
 
-from models import BCRYPT, connect_db, db, from_timestamp, FollowingUser, Story, User
+from models import connect_db, db, FollowingUser, from_timestamp, Story, User
 from dbcred import get_database_uri
 
-from datetime import date, datetime, timezone
-
-from base64 import b64encode
+from tests.test_api import generate_basicauth_credentials, USERDATA
 
 from app import CURR_USER_KEY, app
-app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
-    "fictionsource-test",
-    cred_file = ".dbtestcred",
-    save = False
-)
-if app.config['SQLALCHEMY_DATABASE_URI'] is None:
-    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
-        "fictionsource-test",
-        cred_file = None,
-        save = False
-    )
-
-app.config['SQLALCHEMY_ECHO'] = False
 
 # == TEST CASE =================================================================================== #
 
-USERDATA = (
-    {
-        "username": "testuser",
-        "password": BCRYPT.generate_password_hash("testpass").decode('utf-8'),
-        "description": None,
-        "email": "testuser@gmail.com",
-        "birthdate": date(1997, 3, 16),
-        "joined": datetime(2021, 1, 5, 11, 5, 9, 155000, timezone.utc),
-        "flags": User.Flags.ALLOW_RISQUE
-    },
-    {
-        "username": "testuser2",
-        "password": BCRYPT.generate_password_hash("testpass").decode('utf-8'),
-        "description": None,
-        "email": "testuser2@gmail.com",
-        "birthdate": date(1997, 3, 17),
-        "joined": datetime(2021, 1, 12, 7, 12, 9, 363000, timezone.utc)
-    },
-    {
-        "username": "testuser3",
-        "password": BCRYPT.generate_password_hash("testpass").decode('utf-8'),
-        "description": None,
-        "email": "testuser3@gmail.com",
-        "birthdate": date(1997, 3, 18),
-        "joined": datetime(2021, 1, 25, 3, 22, 18, 796000, timezone.utc),
-        "flags": User.Flags.ALLOW_RISQUE
-    }
-)
-
 class UserAPITestCase(TestCase):
-    """Test cases for User API views."""
+    """Test cases for User API entrypoints."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -89,11 +43,6 @@ class UserAPITestCase(TestCase):
     def tearDown(self) -> None:
         super().tearDown()
         db.session.rollback()
-
-    @staticmethod
-    def generate_basicauth_credentials(username: str, password: str):
-        credentials = b64encode(bytes(f'{username}:{password}', 'utf-8')).decode('utf-8')
-        return f"Basic {credentials}"
         
     def test_get(self) -> None:
         """Tests retrieving a user's information."""
@@ -126,7 +75,7 @@ class UserAPITestCase(TestCase):
         
         # priviledged user data request
         response = self.client.get(f"/api/user/{USERDATA[0]['username']}", headers={
-            "Authorization": self.generate_basicauth_credentials(
+            "Authorization": generate_basicauth_credentials(
                 USERDATA[0]['username'], 'testpass'
             )
         })
@@ -401,6 +350,19 @@ class UserAPITestCase(TestCase):
 
 if __name__ == "__main__":
     from sys import argv
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
+        "fictionsource-test",
+        cred_file = ".dbtestcred",
+        save = False
+    )
+    if app.config['SQLALCHEMY_DATABASE_URI'] is None:
+        app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
+            "fictionsource-test",
+            cred_file = None,
+            save = False
+        )
+    app.config['SQLALCHEMY_ECHO'] = False
 
     if len(argv) > 1:
         app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(

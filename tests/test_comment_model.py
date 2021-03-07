@@ -10,19 +10,6 @@ from dbcred import get_database_uri
 from datetime import date, timedelta
 
 from app import app
-app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
-    "fictionsource-test",
-    cred_file = ".dbtestcred",
-    save = False
-)
-if app.config['SQLALCHEMY_DATABASE_URI'] is None:
-    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
-        "fictionsource-test",
-        cred_file = None,
-        save = False
-    )
-
-app.config['SQLALCHEMY_ECHO'] = False
 
 # == TEST CASE =================================================================================== #
 
@@ -138,6 +125,19 @@ class CommentModelTestCase(TestCase):
 
 if __name__ == "__main__":
     from sys import argv
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
+        "fictionsource-test",
+        cred_file = ".dbtestcred",
+        save = False
+    )
+    if app.config['SQLALCHEMY_DATABASE_URI'] is None:
+        app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
+            "fictionsource-test",
+            cred_file = None,
+            save = False
+        )
+    app.config['SQLALCHEMY_ECHO'] = False
 
     if len(argv) > 1:
         app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
