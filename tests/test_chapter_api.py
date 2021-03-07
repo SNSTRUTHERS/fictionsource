@@ -414,6 +414,15 @@ class ChapterAPITestCase(TestCase):
         self.assertEqual(response.json['code'], 200)
         self.assertEqual(response.json['type'], 'success')
 
+        response = self.client.get(f"/api/chapter/{self.chapter_ids[0]}")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid chapter ID.", response.json['errors'])
+        self.assertNotIn(
+            self.chapter_ids[0],
+            self.client.get(f"/api/story/{self.story_ids[0]}").json['data']['chapters']
+        )
+
         response = self.client.get(f"/api/chapter/{self.chapter_ids[1]}")
         self.assertEqual(response.json['code'], 200)
         self.assertEqual(response.json['type'], 'success')
