@@ -385,6 +385,40 @@ class ChapterAPITestCase(TestCase):
     def test_delete(self) -> None:
         """Tests deleting an existing chapter."""
 
+        # anonymous chapter delete request
+        for id in (1447, self.chapter_ids[1]):
+            response = self.client.delete(f"/api/chapter/{id}")
+            self.assertEqual(response.json['code'], 401)
+            self.assertEqual(response.json['type'], 'error')
+            self.assertIn(
+                "Must be logged in to delete an existing chapter.", response.json['errors']
+            )
+
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[0]
+
+        # unprivleged chapter delete request for private chapter
+        response = self.client.delete(f"/api/chapter/{self.chapter_ids[2]}")
+        self.assertEqual(response.json['code'], 404)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Invalid chapter ID.", response.json['errors'])
+
+        # unprivleged chapter delete request for public chapter
+        response = self.client.delete(f"/api/chapter/{self.chapter_ids[4]}")
+        self.assertEqual(response.json['code'], 401)
+        self.assertEqual(response.json['type'], 'error')
+        self.assertIn("Insufficient credentials.", response.json['errors'])
+
+        # privleged chapter delete request
+        response = self.client.delete(f"/api/chapter/{self.chapter_ids[0]}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        response = self.client.get(f"/api/chapter/{self.chapter_ids[1]}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+        self.assertEqual(response.json['data']['index'], 0)
+
 if __name__ == "__main__":
     from sys import argv
     

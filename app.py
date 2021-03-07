@@ -1220,7 +1220,7 @@ def update_chapter(chapter_id: int):
         return make_error_response("Must be logged in to update an existing chapter.", code=401)
 
     chapter: Optional[Chapter] = Chapter.query.get(chapter_id)
-    if chapter is None:
+    if chapter is None or not chapter.visible(g.user):
         return make_error_response("Invalid chapter ID.")
 
     if chapter.story.author_id != g.user.id and not g.user.is_moderator:
@@ -1254,20 +1254,19 @@ def remove_chapter(chapter_id: int):
         return make_error_response("Must be logged in to delete an existing chapter.", code=401)
 
     chapter: Optional[Chapter] = Chapter.query.get(chapter_id)
-    if chapter is None:
+    if chapter is None or not chapter.visible(g.user):
         return make_error_response("Invalid chapter ID.")
 
     if chapter.story.author_id != g.user.id and not g.user.is_moderator:
         return make_error_response("Insufficient credentials.", code=401)
     
-    story = chapter.story
+    chapters = chapter.story.chapters[:]
     index = chapter.index
+    for ch in chapters[index:]:
+        ch.index -= 1
 
     db.session.delete(chapter)
     db.session.commit()
-
-    for ch in story.chapters[index:]:
-        ch.index -= 1
 
     return make_success_response()
 
