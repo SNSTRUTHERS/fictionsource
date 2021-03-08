@@ -778,53 +778,60 @@ class Tag(IJsonableModel):
         return self.Type(self._type).name.lower()
 
     @classmethod
-    def get(cls, query_name: str) -> Optional["Tag"]:
+    def get(cls, *query_names: str) -> Union[Optional["Tag"], Collection["Tag"]]:
         """Retrieves a tag given a query name if it exists."""
 
         ttype = None
-        name = ""
+        tags = []
 
-        if query_name.startswith('#'):
-            name = query_name[1:]
-        elif ':' not in query_name:
-            name = query_name
-        else:
-            ttype, name = query_name.split(':', 1)
+        for name in query_names:
+            ttype = "generic"
+            if name.startswith('#'):
+                name = name[1:]
+            elif ':' not in name:
+                name = name
+            else:
+                ttype, name = name.split(':', 1)
 
-        errors = []
-        
-        if ttype is not None and not cls.is_valid_type(ttype):
-            errors.append("Invalid tag type.")
-        elif ttype is not None:
-            ttype = cls.Type.__members__[ttype.upper()]
-        else:
-            ttype = cls.Type.GENERIC
-        
-        if len(name) < cls.NAME_MIN_LENGTH:
-            errors.append(f"Tag name must be at least {cls.NAME_MIN_LENGTH} characters long.")
-        elif len(name) > cls.NAME_LENGTH:
-            errors.append(
-                f"Tag name must not be greater than {cls.NAME_LENGTH} characters in length."
-            )
-        elif not cls.is_valid_name(name):
-            errors.append("Invalid tag name.")
+            errors = []
+            
+            if ttype is not None and not cls.is_valid_type(ttype):
+                errors.append(f"Invalid tag type \"{ttype}\".")
+            elif ttype is not None:
+                ttype = cls.Type.__members__[ttype.upper()]
+            else:
+                ttype = cls.Type.GENERIC
+            
+            if len(name) < cls.NAME_MIN_LENGTH:
+                errors.append(f"Tag name must be at least {cls.NAME_MIN_LENGTH} characters long.")
+            elif len(name) > cls.NAME_LENGTH:
+                errors.append(
+                    f"Tag name must not be greater than {cls.NAME_LENGTH} characters in length."
+                )
+            elif not cls.is_valid_name(name):
+                errors.append(f"Invalid tag name \"{name}\".")
 
-        if len(errors) > 0:
-            raise ValueError('\n'.join(errors))
+            if len(errors) > 0:
+                raise ValueError('\n'.join(errors))
 
-        return cls.query.filter_by(_type=ttype, name=name).first()
+            tags.append(cls.query.filter_by(_type=ttype, name=name).first())
 
+        return tags[0] if len(query_names) == 1 else tags
+    
     @classmethod
-    def new(cls, ttype: str, name: str) -> "Tag":
+    def new(cls, ttype: str, name: str, commit: bool = True) -> "Tag":
         """Creates a new tag.
         
         Parameters
         ==========
-        `ttype`: `str`
+        ttype: `str`
             A tag type.
 
-        `name: `str`
+        name: `str`
             The tag's name.
+
+        commit: `bool` = `True`
+            Whether to immediately add the new tag to the database or not.
         """
 
         errors = []
@@ -847,7 +854,9 @@ class Tag(IJsonableModel):
     
         tag = cls(_type=ttype, name=name)
         db.session.add(tag)
-        db.session.commit()
+
+        if commit:
+            db.session.commit()
 
         return tag
 

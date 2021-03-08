@@ -985,6 +985,7 @@ def add_tags(story_id: int):
             code = 400
         )
 
+    new_tags = []
     tags = []
     errors = []
     for i in range(len(request.json)):
@@ -999,19 +1000,34 @@ def add_tags(story_id: int):
                 elif ':' in tag_str:
                     ttype, tag_str = tag_str.split(':', 1)
                 
-                tag = Tag.new(ttype, tag_str)
+                if (ttype not in {"generic", "character", "series"} and
+                    (g.user is None or g.user is not None and not g.user.is_moderator)
+                ):
+                    errors.append(f"Cannot create new tag of type \"{ttype}\".")
+                    continue
+                    
+                tag = Tag.new(ttype, tag_str, False)
+                new_tags.append(tag)
 
             tags.append(tag)
         except ValueError as e:
-            errors += [ f"items[{i}]: " + err for err in str(e).split('\n') ]
+            prefix = "" if len(request.json) == 1 else f"[{i}]: "
+            errors += [ prefix + err for err in str(e).split('\n') ]
     
     if len(errors) > 0:
+        if len(new_tags) > 0:
+            db.session.rollback()
         return make_error_response(*errors, code=400)
+
+    if len(new_tags) > 0:
+        db.session.commit()
     
     for tag in tags:
         if tag not in story.tags:
             story.tags.append(tag)
     db.session.commit()
+
+    return make_success_response()
 
 @app.route("/api/story/<int:story_id>/tags", methods=["DELETE"])
 def remove_tags(story_id: int):
@@ -1033,23 +1049,34 @@ def remove_tags(story_id: int):
             code = 400
         )
 
-    tags = []
+    tags: List[Tag] = []
     errors = []
     for i in range(len(request.json)):
         try:
             tag = Tag.get(request.json[i])
             if tag is None:
                 errors.append(f"items[{i}]: Tag does not exist.")
+            tags.append(tag)
         except ValueError as e:
             errors += [ f"items[{i}]: " + err for err in str(e).split('\n') ]
     
     if len(errors) > 0:
         return make_error_response(*errors, code=400)
 
+    rm_tags = set()
     for tag in tags:
         if tag in story.tags:
             story.tags.remove(tag)
+
+            if len(tag.stories) == 0 and tag.type in {"generic", "character", "series"}:
+                rm_tags.add(tag)
     db.session.commit()
+
+    for tag in rm_tags:
+        db.session.delete(tag)
+    db.session.commit()
+
+    return make_success_response()
 
 @app.route("/api/story/<int:story_id>/favorite", methods=["POST"])
 def favorite_story(story_id: int):
@@ -1471,6 +1498,7 @@ def tag_search():
     """Conducts a search on existing tags."""
 
     errors = []
+    excludes = set()
     results = []
     count = 25
 
@@ -1493,11 +1521,28 @@ def tag_search():
         else:
             count = request.json["count"]
 
+    if "exclude" in request.json:
+        if type(request.json['exclude']) != list:
+            errors.append("'exclude' must be a list.")
+        
+        try:
+            tags = Tag.get(*request.json['exclude'])
+            if type(tags) != Tag:
+                excludes = set(tags)
+            else:
+                excludes = { tags }
+
+            if None in excludes:
+                excludes.remove(None)
+            excludes = set(map(lambda tag: tag.id, excludes))
+        except ValueError as e:
+            errors += str(e).split('\n')
+
     if len(errors) > 0:
         return make_error_response(*errors, code=400)
 
     ttype: Optional[Tag.Type] = None
-    search_str: str = request.json["tag"]
+    search_str: str = request.json["tag"].lower()
 
     # tag types
     if not search_str.startswith('#') and ':' not in search_str:
@@ -1506,8 +1551,10 @@ def tag_search():
             results += [
                 (item[0], None) for item in filter(lambda x: x[1], types.items())
             ][:count]
+            results.sort(key = lambda x: x[0])
     elif search_str.startswith('#'):
         search_str = search_str[1:]
+        ttype = Tag.Type.GENERIC
     elif search_str.split(':', 1)[0] not in Tag.tag_types():
         return make_success_response(results)
     else:
@@ -1521,6 +1568,8 @@ def tag_search():
         query = query.filter(Tag.name.contains(search_str))
     if ttype is not None:
         query = query.filter(Tag._type == ttype)
+    if len(excludes) > 0:
+        query = query.filter(~Tag.id.in_(excludes))
 
     query = query.join(
         Tag.stories,
