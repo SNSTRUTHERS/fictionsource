@@ -147,6 +147,9 @@ window.onload = async () => {
     const tagInput = document.getElementById("tag");
 
     /** @type {HTMLDivElement} */
+    const tagOptionsList = document.getElementById("tag-options");
+
+    /** @type {HTMLDivElement} */
     const storyThumbnail = document.getElementById("story-thumbnail");
 
     /** @type {HTMLFormElement} */
@@ -311,6 +314,8 @@ window.onload = async () => {
             const split = name.split(':')
             tag.classList.add(split[0])
             name = split[1]
+        } else if (name.startsWith('#')) {
+            name = name.slice(1);
         }
         
         tag.appendChild(document.createElement("span"));
@@ -688,24 +693,177 @@ window.onload = async () => {
         }
     };
 
+    // get list of story tags from markup
+    const getTags = () => Array.from(
+        storyTagsForm.children
+    ).slice(
+        0, storyTagsForm.childElementCount - 1
+    ).map((element) =>
+        (element.classList.contains("generic")) ?
+            `#${element.children[1].innerText}` :
+            `${element.className.replace("tag", "").trim()}:${element.children[1].innerText}`
+    );
+
+    // focus/blur handlers for tag options list
+    tagInput.onfocus = () => tagOptionsList.style.visibility = "";
+    tagInput.onblur = (event) => {
+        if (!storyTagsForm.contains(event.relatedTarget))
+            tagOptionsList.style.visibility = "hidden";
+    };
+
+    // update tag options listing
+    const updateTagOptions = (tagQueryName = tagInput.value.trim()) => apiCall(
+        "tag", "POST",
+        {
+            tag: tagQueryName,
+            count: 10,
+            exclude: getTags()
+        }
+    ).then((tags) => {
+        tagOptionsList.innerHTML = "";
+        
+        tags.forEach(([tag, count], index) => {
+            const t = document.createElement("div");
+            t.className = "tag-listing";
+            t.tabIndex = 0;
+            t.onblur = tagInput.onblur;
+
+            const text = document.createElement("span");
+            text.innerText = tag;
+            t.appendChild(text);
+
+            const num = document.createElement("small");
+            num.innerText = count !== null ? count : "(category)";
+            t.appendChild(num);
+
+            tagOptionsList.appendChild(t);
+        });
+    });
+
+    // search tags
     tagInput.oninput = () => {
         const tagQueryName = tagInput.value.trim();
-        if (tagQueryName.length >= 3) {
-            console.log(tagQueryName);
-            apiCall("tag", "POST", { tag: tagQueryName, count: 10 }).then((value) => {
-                console.log(value);
-            }).catch((reason) => {
-                console.error(reason);
-            });
+        if (tagQueryName.length >= 1)
+            updateTagOptions();
+        else
+            tagOptionsList.innerHTML = "";
+    };
+
+    // copy tag in options listing to input box
+    const setTagInput = (item) => {
+        tagInput.value = item.children[0].innerText;
+        if (item.children[1].innerText === "(category)")
+            tagInput.value += ':';
+
+        if (tagInput.value === "generic:")
+            tagInput.value = '#';
+
+        tagInput.focus();
+        updateTagOptions();
+    };
+
+    // copy tag in options listing to input box
+    tagOptionsList.onclick = (event) => {
+        /** @type {HTMLDivElement} */
+        const target = event.target.parentElement;
+        
+        if (target.className !== "tag-listing")
+            return;
+
+        setTagInput(target);
+    };
+
+    storyTagsForm.onkeydown = (event) => {
+        if (event.target.className !== "tag-listing" && event.target !== tagInput) {
+            return;
+        } else if (event.target === tagInput) {
+            if (event.key === "ArrowDown" && tagOptionsList.childElementCount > 0) {
+                event.preventDefault();
+                tagOptionsList.children[0].focus();
+            }
+        } else {
+            // tag options list keyboard navigation
+            switch (event.key) {
+            case " ":
+            case "Enter":
+                event.preventDefault();
+                setTagInput(event.target);
+                break;
+
+            case "ArrowDown":
+                event.preventDefault();
+                if (event.target === tagOptionsList.children[tagOptionsList.childElementCount - 1])
+                    event.target.blur();
+                else
+                    event.target.nextElementSibling.focus();
+                break;
+
+            case "ArrowUp":
+                event.preventDefault();
+                if (event.target === tagOptionsList.children[0])
+                    tagInput.focus();
+                else
+                    event.target.previousElementSibling.focus();
+                break;
+            }
         }
     };
 
-    storyTagsForm.onsubmit = (event) => {
-        event.preventDefault();
+    // remove tag
+    storyTagsForm.onclick = async (event) => {
+        const target = event.target.parentElement;
+        if (target.classList.contains("tag")) {
+            if (!coverIsHidden())
+                return;
+            showCover();
 
-        const tagQueryName = tagInput.value.trim();
+            const tagType = target.className.replace("tag", "").trim();
+            const tagPrefix = tagType === "generic" ? "#" : tagType + ':';
+            const tagQueryName = tagPrefix + target.children[1].innerText;
+
+            await apiCall(`story/${currentStory().dataset['id']}/tags`, "DELETE", [
+                tagQueryName
+            ]);
+
+            target.remove();
+            hideCover();
+        }
     };
 
+    // add new tag
+    storyTagsForm.onsubmit = async (event) => {
+        event.preventDefault();
+
+        if (storyTagsForm.classList.contains("loading") ||!coverIsHidden())
+            return;
+
+        if (getTags().indexOf(tagInput.value.trim()) >= 0) {
+            tagInput.value = "";
+            return;
+        }
+        
+        storyTagsForm.classList.add("loading");
+        showCover();
+
+        const tagQueryName = tagInput.value.trim();
+
+        try {
+            await apiCall(`story/${currentStory().dataset['id']}/tags`, "PUT", [
+                tagQueryName
+            ]);
+
+            const newTagElement = newTagRow(tagQueryName);
+            storyTagsForm.children[storyTagsForm.childElementCount - 1].before(newTagElement);
+        } catch (e) {
+            alert("ERROR:\n" + e.errors.join('\n'));
+        }
+
+        tagInput.value = "";
+        storyTagsForm.classList.remove("loading");
+        hideCover();
+    };
+
+    // bring up change thumbnail dialog
     storyThumbnail.onclick = () => {
         if (!coverIsHidden() || storyImageForm.action === "")
             return;
@@ -715,7 +873,6 @@ window.onload = async () => {
 
         const cover = document.getElementById("cover");
         cover.onclick = (event) => {
-            console.log(event.target);
             if (event.target === cover) {
                 storyImageForm.style.visibility = "";
                 hideCover();
@@ -725,6 +882,7 @@ window.onload = async () => {
         };
     };
 
+    // submit new story image
     storyImageForm.onsubmit = (event) => {
         if (storyImageForm.action === "")
             event.preventDefault();

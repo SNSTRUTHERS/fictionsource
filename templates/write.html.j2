@@ -66,10 +66,13 @@
                 {% endif %}
                 ></div>
 
+                <textarea
+                    id="story-summary"
+                    placeholder="Story Summary"
                 {% if estory is not none %}
-                <textarea id="story-summary">{{estory.summary}}</textarea>
+                >{{estory.summary}}</textarea>
                 {% else %}
-                <textarea id="story-summary"></textarea>
+                ></textarea>
                 {% endif %}
             </div>
 
@@ -126,16 +129,21 @@
                 </div>
             {% endfor %}
             {% endif %}
-                <div class="form-group">
-                    <input
-                        type="text"
-                        id="tag"
-                    {% if g.user.stories|length == 0 %}
-                        disabled
-                    {% endif %}
-                    >
+                <div id="tag-input">
+                    <div class="form-group">
+                        <input
+                            type="text"
+                            id="tag"
+                            autocomplete="off"
+                        {% if g.user.stories|length == 0 %}
+                            disabled
+                        {% endif %}
+                        >
 
-                    <input type="submit" value="Add">
+                        <input type="submit" value="Add">
+                    </div>
+                    <div id="tag-options">
+                    </div>
                 </div>
             </form>
 
@@ -165,10 +173,13 @@
             </div>
 
             <div id="chapter-info">
+            <textarea
+                id="chapter-author-notes"
+                placeholder="Author's Notes"
             {% if echapter is not none and echapter.author_notes is not none %}
-                <textarea id="chapter-author-notes">{{echapter.author_notes}}</textarea>
+            >{{echapter.author_notes}}</textarea>
             {% else %}
-                <textarea id="chapter-author-notes"></textarea>
+            ></textarea>
             {% endif %}
             </div>
 
@@ -189,10 +200,13 @@
         </section>
 
         <section class="editor">
+            <textarea
+                id="input"
         {% if echapter is not none %}
-            <textarea id="input">{{echapter.text}}</textarea>
+            >{{echapter.text}}</textarea>
         {% else %}
-            <textarea id="input" disabled></textarea>
+                disabled
+            ></textarea>
         {% endif %}
 
             <section id="output"></section>

@@ -413,102 +413,6 @@ nav .logo::after {
     background: #ffffff20;
 }
 
-nav form {
-    flex: 1;
-    max-width: 18em;
-}
-
-nav form input[type="text"] {
-    all: unset;
-
-    background: white;
-    color: black;
-    
-    border: #888 1px solid;
-    border-bottom-left-radius: 0.65em;
-    border-top-left-radius: 0.65em;
-
-    flex: 1;
-
-    font-family: LeagueSpartan;
-    font-size: 1em;
-    font-weight: 100;
-    
-    height: 1em;
-
-    min-width: 0 !important;
-
-    padding: 0.25em;
-    padding-left: 0.5em;
-}
-
-nav form input[type="text"]:hover {
-    border: #aaf 1px solid;
-}
-nav form input[type="text"]:hover ~ button {
-    border-bottom: #aaf 1px solid;
-    border-right: #aaf 1px solid;
-    border-top: #aaf 1px solid;
-}
-
-nav form input[type="text"]:focus {
-    border: #ddf 1px solid;
-}
-nav form input[type="text"]:focus ~ button {
-    border-bottom: #ddf 1px solid;
-    border-right: #ddf 1px solid;
-    border-top: #ddf 1px solid;
-}
-
-nav form button {
-    padding: 0;
-    
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0.65em;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0.65em;
-
-    border-bottom: #888 1px solid;
-    border-right: #888 1px solid;
-    border-top: #888 1px solid;
-
-    position: relative;
-
-    width: 1.75em;
-    height: 1.5em;
-}
-nav form button::before {
-    content: "";
-
-    background: white;
-
-    border: white 2px solid !important;
-    border-radius: 0.1em;
-
-    position: absolute;
-    left: 0.2em;
-    top: 0.95em;
-
-    transform: rotate(-45deg);
-    
-    width: 0.375em;
-}
-nav form button::after {
-    content: "";
-
-    border: white 2px solid !important;
-    border-radius: 0.6em;
-
-    display: block;
-
-    position: absolute;
-    left: 0.55em;
-    top: 0.2em;
-
-    width: 0.6em;
-    height: 0.6em;
-}
-
 /* == HOMEPAGE POSTER =========================================================================== */
 
 .poster {
@@ -634,7 +538,8 @@ span.subtitle {
 .form-group input[type="email"],
 .form-group input[type="number"],
 .form-group input[type="password"],
-.form-group input[type="text"] {
+.form-group input[type="text"],
+.form-group input[type="url"] {
     all: unset;
 
     background: white;
@@ -661,7 +566,8 @@ span.subtitle {
 .form-group input[type="email"]:not(:only-child):first-child,
 .form-group input[type="number"]:not(:only-child):first-child,
 .form-group input[type="password"]:not(:only-child):first-child,
-.form-group input[type="text"]:not(:only-child):first-child {
+.form-group input[type="text"]:not(:only-child):first-child,
+.form-group input[type="url"]:not(:only-child):first-child {
     border-top-right-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
 }
@@ -1103,7 +1009,7 @@ main.write {
 
 #details {
     display: grid;
-    grid-template-columns: 25% 25% 25% 25%;
+    grid-template-columns: 50% 50%;
 }
 
 #details img {
@@ -1270,6 +1176,47 @@ i.fa-plus:active {
     color: #00ff00;
 }
 
+#tag-input {
+    position: relative;
+}
+
+#tag-options {
+    background: #8aa0db;
+
+    position: absolute;
+    top: 100%;
+    left: 0;
+
+    width: 100%;
+}
+
+#tag-options > div {
+    cursor: pointer;
+
+    display: flex;
+
+    padding: 0.25em;
+}
+#tag-options > div:focus {
+    background: #ffffff28;
+}
+#tag-options > div:hover {
+    background: #ffffff40;
+}
+#tag-options > div:active {
+    background: #ffffff50;
+}
+#tag-options > div > :first-child {
+    flex: 1;
+}
+#tag-options > div > :last-child {
+    line-height: 1.25em;
+
+    min-width: 50px;
+
+    text-align: right;
+}
+
 /* == COMMENTS ================================================================================== */
 
 section#comments {
@@ -1418,5 +1365,11 @@ section#comments {
     main.read {
         padding-left: 8em;
         padding-right: 8em;
+    }
+}
+
+@media only screen and (min-width: 1024px) {
+    #details {
+        grid-template-columns: 25% 25% 25% 25%;
     }
 }
