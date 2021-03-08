@@ -6,6 +6,10 @@
     {% set form_action = "" %}
 {% endif %}
 
+{% if form_title is not defined %}
+    {% set form_title = "Upload Image:" %}
+{% endif %}
+
 <form
     action="{{form_action}}"
     enctype="multipart/form-data"
@@ -13,7 +17,9 @@
     id="{{form_id}}"
     class="image-form"
 >
-    <h2>Upload Image:</h2>
+    <h2>{{form_title}}</h2>
+
+    {% block pre_imgform %}{% endblock pre_imgform %}
 
     <input
         type="radio"
@@ -54,6 +60,8 @@
             >
         </div>
     </div>
+
+    {% block post_imgform %}{% endblock post_imgform %}
 
     <input type="hidden" name="csrf_token" value="{{g.generate_csrf()}}">
     <input type="submit" value="Submit">
