@@ -70,7 +70,7 @@ const dateToTimeElement = (date) => {
  * 
  * @returns {HTMLElement} A comment as an HTML node.
  */
-const renderComment = ({
+/*const renderComment = ({
     id,
     author,
     text,
@@ -112,7 +112,7 @@ const renderComment = ({
     }
 
     return comment;
-};
+};*/
 
 /* ============================================================================================== */
 
@@ -143,7 +143,7 @@ const apiCall = window["apiCall"];
  */
 const renderMarkdown = window["renderMarkdown"];
 
-const commentList = document.getElementById("comment-list");
+// const commentList = document.getElementById("comment-list");
 
 /** @type {number} */
 const chapterId = document.getElementsByTagName("main")[0].dataset["chapterId"];
@@ -151,103 +151,103 @@ const chapterId = document.getElementsByTagName("main")[0].dataset["chapterId"];
 /** @type {number} */
 const storyId = document.getElementsByTagName("main")[0].dataset["storyId"];
 
-let numComments = commentList.childElementCount;
-
-commentList.onclick = async (event) => {
-    if (event.target.tagName.toLowerCase() === "button") {
-        if (event.target.classList.contains("loading") || !coverIsHidden())
-            return;
-        event.target.classList.add("loading");
-
-        /** @type {HTMLDivElement} */
-        const parent = event.target.parentElement;
-
-        /** @type {APIComment[]} */
-        const replies = await apiCall(`comment/${parent.dataset["id"]}/replies?${
-            event.target.classList.contains("more-replies") ?
-                `offset=${parent.childElementCount - 1}&` :
-                ""
-        }count=11`);
-
-        const repliesList = document.createElement("div");
-        repliesList.className = "replies";
-        
-        replies.slice(0, 10).forEach(
-            (reply) => repliesList.appendChild(renderComment(reply))
-        );
-
-        if (replies.length === 11) {
-            const button = document.createElement("button");
-            button.innerText = "Show More Replies";
-            button.className = "more-replies";
-            comment.appendChild(button);
-        }
-
-        event.target.parentNode.appendChild(repliesList);
-        event.target.remove();
-    }
-};
+// let numComments = commentList.childElementCount;
+//
+// commentList.onclick = async (event) => {
+//     if (event.target.tagName.toLowerCase() === "button") {
+//         if (event.target.classList.contains("loading") || !coverIsHidden())
+//             return;
+//         event.target.classList.add("loading");
+//
+//         /** @type {HTMLDivElement} */
+//         const parent = event.target.parentElement;
+//
+//         /** @type {APIComment[]} */
+//         const replies = await apiCall(`comment/${parent.dataset["id"]}/replies?${
+//             event.target.classList.contains("more-replies") ?
+//                 `offset=${parent.childElementCount - 1}&` :
+//                 ""
+//         }count=11`);
+//
+//         const repliesList = document.createElement("div");
+//         repliesList.className = "replies";
+//
+//         replies.slice(0, 10).forEach(
+//             (reply) => repliesList.appendChild(renderComment(reply))
+//         );
+//
+//         if (replies.length === 11) {
+//             const button = document.createElement("button");
+//             button.innerText = "Show More Replies";
+//             button.className = "more-replies";
+//             comment.appendChild(button);
+//         }
+//
+//         event.target.parentNode.appendChild(repliesList);
+//         event.target.remove();
+//     }
+// };
 
 /** @type {HTMLButtonElement} */
-const moreCommentsButton = document.getElementById("more-comments");
-if (moreCommentsButton !== null) {
-    moreCommentsButton.onclick = async () => {
-        if (moreCommentsButton.classList.contains("loading") || !coverIsHidden())
-            return;
-        moreCommentsButton.classList.add("loading");
+// const moreCommentsButton = document.getElementById("more-comments");
+// if (moreCommentsButton !== null) {
+//     moreCommentsButton.onclick = async () => {
+//         if (moreCommentsButton.classList.contains("loading") || !coverIsHidden())
+//             return;
+//         moreCommentsButton.classList.add("loading");
+//
+//         const parent = moreCommentsButton.parentElement;
+//         moreCommentsButton.remove();
+//
+//         showCover();
+//
+//         /** @type {APIComment[]} */
+//         const comments = await apiCall(`/chapter/${
+//             chapterId
+//         }/comments?offset=${
+//             numComments
+//         }&count=11`);
+//
+//         comments.slice(0, 10).forEach(
+//             (comment) => commentList.appendChild(renderComment(comment))
+//         );
+//
+//         if (comments.length === 11)
+//             parent.appendChild(moreCommentsButton);
+//
+//         numComments += comments.length - 1;
+//
+//         hideCover();
+//         moreCommentsButton.classList.remove("loading");
+//     };
+// }
 
-        const parent = moreCommentsButton.parentElement;
-        moreCommentsButton.remove();
-
-        showCover();
-
-        /** @type {APIComment[]} */
-        const comments = await apiCall(`/chapter/${
-            chapterId
-        }/comments?offset=${
-            numComments
-        }&count=11`);
-
-        comments.slice(0, 10).forEach(
-            (comment) => commentList.appendChild(renderComment(comment))
-        );
-
-        if (comments.length === 11)
-            parent.appendChild(moreCommentsButton);
-
-        numComments += comments.length - 1;
-        
-        hideCover();
-        moreCommentsButton.classList.remove("loading");
-    };
-}
-
-document.getElementById("comments").onsubmit = async (event) => {
-    if (event.target.id == "new-comment") {
-        event.preventDefault();
-
-        if (event.target.classList.contains("loading") || !coverIsHidden())
-            return;
-
-        showCover();
-        event.target.classList.add("loading");
-
-        const apiPath = event.target.dataset["id"] === undefined ?
-            `chapter/${chapterId}/comments` :
-            `comment/${event.target.dataset["id"]}/replies`
-        ;
-
-        /** @type {APIComment} */
-        const newComment = await apiCall(apiPath, "POST", {
-            "text": event.target.getElementsByTagName("textarea")[0].value
-        });
-
-        const commentHTML = renderComment(newComment);
-
-        event.target.classList.remove("loading");
-        hideCover();
-    }
-};
+// document.getElementById("comments").onsubmit = async (event) => {
+//     if (event.target.id == "new-comment") {
+//         event.preventDefault();
+//
+//         if (event.target.classList.contains("loading") || !coverIsHidden())
+//             return;
+//
+//         showCover();
+//         event.target.classList.add("loading");
+//
+//         const apiPath = event.target.dataset["id"] === undefined ?
+//             `chapter/${chapterId}/comments` :
+//             `comment/${event.target.dataset["id"]}/replies`
+//         ;
+//
+//         /** @type {APIComment} */
+//         const newComment = await apiCall(apiPath, "POST", {
+//             "text": event.target.getElementsByTagName("textarea")[0].value
+//         });
+//
+//         const commentHTML = renderComment(newComment);
+//
+//         event.target.classList.remove("loading");
+//         hideCover();
+//     }
+// };
 
 if (document.getElementById("favorite")) {
     /** @type {HTMLElement} */

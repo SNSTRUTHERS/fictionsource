@@ -98,7 +98,7 @@
         <section id="main"><pre>{{chapter.text}} </pre></section>
     </main>
 
-    <section id="comments">
+    {# <section id="comments">
     {% if chapter.story.can_comment %}
         <form id="new-comment" class="new-comment">
             <textarea></textarea>
@@ -136,7 +136,7 @@
     {% if chapter.comments|length > 10 %}
         <button id="more-comments">Show More Comments</button>
     {% endif %}
-    </section>
+    </section> #}
 {% endblock content %}
 
 {% block footer %}
@@ -147,10 +147,10 @@
     const main = document.getElementById("main");
     main.innerHTML = window["renderMarkdown"](main.children[0].innerText);
 
-    for (const comment of document.getElementById("comment-list").children) {
+    /*for (const comment of document.getElementById("comment-list").children) {
         const article = comment.getElementsByTagName("article")[0];
         article.innerHTML = window["renderMarkdown"](article.children[0].innerText);
-    }
+    }*/
     
     document.body.classList.toggle("cover");
 })();
