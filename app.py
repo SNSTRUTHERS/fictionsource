@@ -22,7 +22,7 @@ from forms import LogInForm, RegisterForm
 from flask_wtf.csrf import generate_csrf, validate_csrf
 
 from flask import (
-    Flask, g, jsonify, make_response, render_template,
+    flash, Flask, g, get_flashed_messages, jsonify, make_response, render_template,
     redirect, Response, request, send_file, session
 )
 from flaskkey import get_key
@@ -61,6 +61,14 @@ def to_jsontype(t: type):
         "list": "list",
         "dict": "object"
     }.get(t.__name__, t.__name__.lower())
+
+def allowed_file(filename: str):
+    return (
+        '.' in filename and
+        filename.rsplit('.', 1)[1].lower() in {
+            'png', 'jpg', 'jpeg', 'gif', 'webp', 'tif', 'tiff', 'svg'
+        }
+    )
 
 # ---- Search engine ----------------------------------------------------------------------------- #
 
@@ -247,6 +255,7 @@ def setup_flask_globals():
     g.search_sort_by = SearchSortEnum.good_values()
     g.generate_csrf = generate_csrf
     g.DEFAULT_THUMBNAIL_URI = Story.DEFAULT_THUMBNAIL_URI
+    g.get_flashed_messages = get_flashed_messages
 
     if request.authorization is not None:
         g.user = User.authenticate(
@@ -423,7 +432,7 @@ def log_out():
 
 # ---- USER ROUTES ------------------------------------------------------------------------------- #
 
-@app.route("/user/<username>")
+@app.route("/user/<username>", methods=["GET"])
 def user_page(username: str):
     """Route for rendering a user page."""
     
@@ -432,6 +441,64 @@ def user_page(username: str):
         return error_404(None)
     
     return render_template("user.html.j2", user=user, g=g)
+
+@app.route("/user/<username>", methods=["POST"])
+def edit_user_details(username: str):
+    """Edits a user's details."""
+    
+    user: Optional[User] = User.query.filter_by(username=username).first()
+    if user is None or g.user != user:
+        flash("Must be logged in as user to edit page.", "error")
+        return redirect(f"/user/{username}")
+
+    try:
+        validate_csrf(request.form["csrf_token"])
+    except ValidationError:
+        flash("Invalid user edit request.", "error")
+        return redirect(f"/user/{username}")
+    
+    if User.authenticate(username, request.form["password"]) is None:
+        flash("Insufficient credentials.", "error")
+        return redirect(f"/user/{username}")
+
+    errors = []
+    updates = {}
+    
+    if request.form["username"] not in {"", username}:
+        updates['username'] = request.form["username"]
+
+    if request.form["new_password"] != "":
+        new_password = request.form["new_password"]
+        if new_password != request.form["confirm_new_password"]:
+            errors.append("New passwords don't match.")
+        else:
+            updates['password'] = new_password
+        
+    if request.form["description"] != "":
+        updates['description'] = request.form["description"]
+
+    if request.form["type"] == "file": # file upload
+        f = request.files["file"]
+        
+        ext = f.filename.rsplit('.', 1)[1]
+        if allowed_file(f.filename):
+            filename = f"/static/images/users/{token_urlsafe(64)}.{ext}"
+            while path.exists(filename[1:]):
+                filename = f"/static/images/users/{token_urlsafe(64)}.{ext}"
+
+            f.save(filename)
+
+            updates['image'] = filename
+    elif request.form["type"] == "url" and request.form["url"] != "": # url
+        updates['image'] = request.form["url"]
+
+    if len(errors) == 0:
+        errors = user.update(**updates)
+    
+    for error in errors:
+        flash(error, "error")
+    
+    return redirect(f"/user/{username}")
 
 @app.route("/write", methods=["GET"])
 def write_page():
@@ -461,14 +528,6 @@ def write_page():
 @app.route("/write/<int:story_id>", methods=["POST"])
 def change_story_thumbnail(story_id: int):
     """Route for changing a story's thumbnail."""
-
-    def allowed_file(filename):
-        return (
-            '.' in filename and
-            filename.rsplit('.', 1)[1].lower() in {
-                'png', 'jpg', 'jpeg', 'gif', 'webp', 'tif', 'tiff', 'svg'
-            }
-        )
 
     if g.user is None:
         return error_401(None)

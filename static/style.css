@@ -530,8 +530,30 @@ span.subtitle {
     font-family: LeagueSpartan;
 }
 
-.form-group input {
+.form-group input,
+.form-group textarea {
     width: 100%;
+}
+
+.form-group textarea {
+
+    background: white;
+    color: black;
+
+    border: 1px solid #888;
+    border-radius: 0.35em;
+
+    flex: 1;
+
+    font-family: LeagueSpartan;
+    font-weight: 100;
+
+    padding-bottom: 0.125em;
+    padding-left: 0.25em;
+    padding-right: 0.25em;
+    padding-top: 0.125em;
+
+    transition: 0.25s ease border-color;
 }
 
 .form-group input[type="date"],
@@ -559,8 +581,6 @@ span.subtitle {
     padding-top: 0.125em;
 
     transition: 0.25s ease border-color;
-
-    width: 100%;
 }
 .form-group input[type="date"]:not(:only-child):first-child,
 .form-group input[type="email"]:not(:only-child):first-child,
@@ -570,6 +590,15 @@ span.subtitle {
 .form-group input[type="url"]:not(:only-child):first-child {
     border-top-right-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
+}
+.form-group input[type="date"]:not(:only-child):last-child,
+.form-group input[type="email"]:not(:only-child):last-child,
+.form-group input[type="number"]:not(:only-child):last-child,
+.form-group input[type="password"]:not(:only-child):last-child,
+.form-group input[type="text"]:not(:only-child):last-child,
+.form-group input[type="url"]:not(:only-child):last-child {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
 }
 
 .form-group input:invalid {
@@ -602,10 +631,21 @@ textarea {
     resize: none;
 }
 
-.image-form {
+.cover-form {
     background: #768dca;
     border-radius: 0.5em;
 
+    font-family: LeagueSpartan;
+
+    padding: 1.25em;
+    width: 640px;
+}
+
+.cover-form .cover-form-title {
+    text-align: center;
+}
+
+.image-form {
     display: grid;
     grid-template-areas:
         'heading heading'
@@ -613,11 +653,6 @@ textarea {
         'main main'
         'button button'
     ;
-
-    font-family: LeagueSpartan;
-
-    padding: 1.25em;
-    width: 640px;
 }
 
 .image-form > h2 {
@@ -876,6 +911,12 @@ div.user > main {
     padding-right: 0.5em;
 
     width: calc(100% - 1em);
+}
+
+p.description {
+    font-size: 125%;
+    margin-left: 2em;
+    margin-right: 2em;
 }
 
 div.user > img {
@@ -1143,7 +1184,7 @@ div.select-box > * > div {
     flex: 1;
 }
 
-div.select-box i.fas {
+i.fas {
     cursor: pointer;
 }
 
@@ -1215,6 +1256,43 @@ i.fa-plus:active {
     min-width: 50px;
 
     text-align: right;
+}
+
+/* == ERRORS ==================================================================================== */
+
+#errors {
+    display: flex;
+    flex-direction: column-reverse;
+    height: 100%;
+
+    font-family: LeagueSpartan;
+    font-weight: 300;
+
+    margin-bottom: 0.5em;
+    margin-right: 1em;
+
+    position: fixed;
+    bottom: 0;
+    right: 0;
+
+    z-index: 2;
+}
+
+#errors > div {
+    background: #e48d8d;
+    border-radius: 0.5em;
+
+    margin-top: auto;
+    padding: 0.5em;
+
+    width: 260px;
+}
+
+#errors > div > i {
+    display: block;
+    
+    margin-left: auto;
+    margin-right: 0;
 }
 
 /* == COMMENTS ================================================================================== */

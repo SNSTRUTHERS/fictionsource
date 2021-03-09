@@ -12,3 +12,11 @@ for (const t of document.getElementsByTagName("time")) {
         }
     );
 }
+
+const errorsDiv = document.getElementById("errors");
+if (errorsDiv) {
+    errorsDiv.onclick = (event) => {
+        if (event.target.classList.contains("delete"))
+            event.target.parentElement.remove();
+    };
+}
