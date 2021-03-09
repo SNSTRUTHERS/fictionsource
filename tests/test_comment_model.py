@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Story model tests."""
+"""Comment model tests."""
 
 from unittest import TestCase, main
 
