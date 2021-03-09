@@ -47,19 +47,22 @@ class TagModelTestCase(TestCase):
     def test_new(self) -> None:
         """Tests the Tag.new class method."""
 
-        self.assertRaises(ValueError, Tag.new, None, "")
-        self.assertRaises(ValueError, Tag.new, 1.5, "")
-        self.assertRaises(ValueError, Tag.new, 8, "")
-        self.assertRaises(ValueError, Tag.new, [], "")
-        self.assertRaises(ValueError, Tag.new, {}, "")
-        self.assertRaises(ValueError, Tag.new, "", None)
-        self.assertRaises(ValueError, Tag.new, "", 1.5)
-        self.assertRaises(ValueError, Tag.new, "", 8)
-        self.assertRaises(ValueError, Tag.new, "", [])
-        self.assertRaises(ValueError, Tag.new, "", {})
-        self.assertRaises(ValueError, Tag.new, "", "")
-        self.assertRaises(ValueError, Tag.new, "generic", "")
-        self.assertRaises(ValueError, Tag.new, "abc", "abc")
+        for raise_case in (
+            (None, ""),
+            (1.5, ""),
+            (8, ""),
+            ([], ""),
+            ({}, ""),
+            ("", None),
+            ("", 1.5),
+            ("", 8),
+            ("", []),
+            ("", {}),
+            ("", ""),
+            ("generic", ""),
+            ("abc", "abc")
+        ):
+            self.assertRaises(ValueError, Tag.new, *raise_case)
 
         tag1 = Tag.new("generic", "test")
         self.assertEqual(tag1.type, "generic")
@@ -82,36 +85,45 @@ class TagModelTestCase(TestCase):
     def test_valid_names(self) -> None:
         """Tests the Tag.is_valid_name method."""
 
-        self.assertFalse(Tag.is_valid_name(""))
-        self.assertFalse(Tag.is_valid_name("a"))
-        self.assertFalse(Tag.is_valid_name("ab"))
-        self.assertFalse(Tag.is_valid_name("  "))
-        self.assertFalse(Tag.is_valid_name("\n"))
-        self.assertFalse(Tag.is_valid_name("_ "))
-        self.assertFalse(Tag.is_valid_name("((("))
-        self.assertFalse(Tag.is_valid_name(")))"))
-        self.assertFalse(Tag.is_valid_name("+%  "))
-        self.assertFalse(Tag.is_valid_name("category:test"))
-        self.assertFalse(Tag.is_valid_name("2+2=4"))
-        self.assertFalse(Tag.is_valid_name("x2>5"))
-        self.assertFalse(Tag.is_valid_name("!!!"))
-        self.assertFalse(Tag.is_valid_name("???"))
-        self.assertFalse(Tag.is_valid_name("\n\t\t\t\b\x00"))
-        self.assertFalse(Tag.is_valid_name("a" * (Tag.NAME_LENGTH + 1)))
+        for false_case in (
+            "",
+            "a",
+            "ab",
+            "  ",
+            "\n",
+            "_ ",
+            "(((",
+            ")))",
+            "+%  ",
+            "category:test",
+            "2+2=4",
+            "x2>5",
+            "!!!",
+            "???",
+            "\n\t\t\t\b\x00",
+            "a" * (Tag.NAME_LENGTH + 1)
+        ):
+            self.assertFalse(Tag.is_valid_name(false_case))
 
-        self.assertTrue(Tag.is_valid_name("abc"))
-        self.assertTrue(Tag.is_valid_name("test"))
-        self.assertTrue(Tag.is_valid_name("abc123"))
-        self.assertTrue(Tag.is_valid_name("see_me_after_dinner"))
+        for true_case in (
+            "abc",
+            "test",
+            "abc123",
+            "see_me_after_dinner"
+        ):
+            self.assertTrue(Tag.is_valid_name(true_case))
 
     def test_valid_types(self) -> None:
         """Tests the Tag.is_valid_type method."""
 
-        self.assertFalse(Tag.is_valid_type(""))
-        self.assertFalse(Tag.is_valid_type(1))
-        self.assertFalse(Tag.is_valid_type(2.5))
-        self.assertFalse(Tag.is_valid_type(None))
-        self.assertFalse(Tag.is_valid_type("abcdefg"))
+        for false_case in (
+            "",
+            1,
+            2.5,
+            None,
+            "abcdefg"
+        ):
+            self.assertFalse(Tag.is_valid_type(false_case))
 
         for member in Tag.Type.__members__.keys():
             self.assertTrue(Tag.is_valid_type(member.lower()))
