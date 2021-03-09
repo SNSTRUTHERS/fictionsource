@@ -1053,6 +1053,8 @@ def add_tags(story_id: int):
     tags = []
     errors = []
     for i in range(len(request.json)):
+        prefix = "" if len(request.json) == 1 else f"[{i}]: "
+
         try:
             tag_str = request.json[i]
             tag = Tag.get(tag_str)
@@ -1067,7 +1069,7 @@ def add_tags(story_id: int):
                 if (ttype not in {"generic", "character", "series"} and
                     (g.user is None or g.user is not None and not g.user.is_moderator)
                 ):
-                    errors.append(f"Cannot create new tag of type \"{ttype}\".")
+                    errors.append(prefix + f"Cannot create new tag of type \"{ttype}\".")
                     continue
                     
                 tag = Tag.new(ttype, tag_str, False)
@@ -1075,7 +1077,6 @@ def add_tags(story_id: int):
 
             tags.append(tag)
         except ValueError as e:
-            prefix = "" if len(request.json) == 1 else f"[{i}]: "
             errors += [ prefix + err for err in str(e).split('\n') ]
     
     if len(errors) > 0:
@@ -1116,13 +1117,15 @@ def remove_tags(story_id: int):
     tags: List[Tag] = []
     errors = []
     for i in range(len(request.json)):
+        prefix = "" if len(request.json) == 1 else f"[{i}]: "
+
         try:
             tag = Tag.get(request.json[i])
             if tag is None:
-                errors.append(f"items[{i}]: Tag does not exist.")
+                errors.append(prefix + "Tag does not exist.")
             tags.append(tag)
         except ValueError as e:
-            errors += [ f"items[{i}]: " + err for err in str(e).split('\n') ]
+            errors += [ prefix + err for err in str(e).split('\n') ]
     
     if len(errors) > 0:
         return make_error_response(*errors, code=400)
@@ -1661,12 +1664,12 @@ def tag_listing(tag_name: str):
         tag = Tag.get(tag_name)
 
         if tag is None:
-            return make_error_response(f"Tag with name \"{tag_name}\" doesn't exist.", code=400)
+            return make_error_response(f"Tag with name \"{tag_name}\" doesn't exist.")
     except ValueError as e:
         errors = str(e).split('\n')
         return make_error_response(*errors, code=400)
 
-    return make_success_response(tag.to_json(), code=200)
+    return make_success_response(tag.to_json(g.user), code=200)
 
 # ---- Report routes (site moderators only) ------------------------------------------------------ #
 

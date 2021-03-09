@@ -367,6 +367,8 @@ class User(IJsonableModel):
 
         expanded.add(self)
 
+        ignore_risque = user.allow_risque if user is not None else False
+
         d = {
             "username": self.username,
             "birthdate": to_timestamp(self.birthdate),
@@ -379,14 +381,14 @@ class User(IJsonableModel):
             "favorite_stories": [
                 story.expand(user, expand, expanded)
                 for story in filter(
-                    lambda s: s.visible(),
+                    lambda s: s.visible(ignore_risque=ignore_risque),
                     self.favorite_stories
                 )
             ],
             "followed_stories": [
                 story.expand(user, expand, expanded)
                 for story in filter(
-                    lambda s: s.visible(),
+                    lambda s: s.visible(ignore_risque=ignore_risque),
                     self.followed_stories
                 )
             ],
@@ -403,7 +405,7 @@ class User(IJsonableModel):
             "stories": [
                 story.expand(user, expand, expanded)
                 for story in filter(
-                    lambda story: story.visible(user),
+                    lambda story: story.visible(user, ignore_risque=ignore_risque),
                     reversed(self.stories)
                 )
             ]
@@ -746,8 +748,6 @@ class Tag(IJsonableModel):
         nullable = False
     )
 
-    description: Optional[str] = db.Column(db.Text)
-
     stories: List["Story"] = db.relationship("Story", secondary="story_tags")
 
     def to_json(self,
@@ -757,14 +757,18 @@ class Tag(IJsonableModel):
     ) -> JSONType:
         """Converts this Tag into a dictionary that can be JSONified."""
 
+        ignore_risque = user.allow_risque if user is not None else False
+
         return {
             "name": self.name,
             "query_name": self.query_name,
-            "description": self.description,
             "type": self.type,
             "stories": [
                 story.expand(user, expand, expanded)
-                for story in self.stories
+                for story in filter(
+                    lambda story: story.visible(ignore_risque=ignore_risque),
+                    self.stories
+                )
             ]
         }
 
@@ -791,19 +795,18 @@ class Tag(IJsonableModel):
     def get(cls, *query_names: str) -> Union[Optional["Tag"], Collection["Tag"]]:
         """Retrieves a tag given a query name if it exists."""
 
-        ttype = None
         tags = []
+        errors = []
 
         for name in query_names:
-            ttype = "generic"
+            ttype = None
             if name.startswith('#'):
                 name = name[1:]
-            elif ':' not in name:
-                name = name
-            else:
+                ttype = "generic"
+            elif ':' in name:
                 ttype, name = name.split(':', 1)
-
-            errors = []
+            else:
+                errors.append("No tag type provided.")
             
             if ttype is not None and not cls.is_valid_type(ttype):
                 errors.append(f"Invalid tag type \"{ttype}\".")
@@ -1273,7 +1276,8 @@ class Story(IJsonableModel):
         author: User,
         title: str,
         summary: str = "",
-        thumbnail: str = DEFAULT_THUMBNAIL_URI
+        thumbnail: str = DEFAULT_THUMBNAIL_URI,
+        commit: bool = True
     ) -> "Story":
         """Creates a new story and adds it to the database.
         
@@ -1290,6 +1294,9 @@ class Story(IJsonableModel):
 
         thumbnail: `str` = `DEFAULT_THUMBNAIL_URI`
             The story's thumbnail.
+
+        commit: `bool` = `True`
+            Whether to commit the new story to the database immediately.
 
         Returns
         =======
@@ -1327,7 +1334,8 @@ class Story(IJsonableModel):
         )
         
         db.session.add(story)
-        db.session.commit()
+        if commit:
+            db.session.commit()
 
         return story
 
@@ -1706,7 +1714,8 @@ class Chapter(IMarkdownModel):
         story: Story,
         name: Optional[str] = None,
         text: str = "",
-        author_notes: Optional[str] = None
+        author_notes: Optional[str] = None,
+        commit: bool = True
     ) -> "Chapter":
         """Creates a new chapter for a given story & adds it to the database.
         
@@ -1723,6 +1732,9 @@ class Chapter(IMarkdownModel):
 
         author_notes: `Optional[str]` = `None`
             The chapter's author's notes.
+
+        commit: `bool` = `True`
+            Whether to commit the new chapter to the database immediately or not.
         
         Returns
         =======
@@ -1760,7 +1772,8 @@ class Chapter(IMarkdownModel):
         )
 
         db.session.add(chapter)
-        db.session.commit()
+        if commit:
+            db.session.commit()
 
         return chapter
 
@@ -1908,12 +1921,13 @@ class Comment(IMarkdownModel):
         user: User,
         text: str,
         of: Union["Comment", Chapter]
-    ) -> Optional["Comment"]:
+    ) -> "Comment":
         """Creates a new comment.
 
         Parameters
         ==========
         user: `User`
+            The user who posted the comment.
 
         text: `str`
             The content of the new comment.
@@ -1927,9 +1941,6 @@ class Comment(IMarkdownModel):
         =======
         `Comment`
             A new comment placed in the database with the given information.
-        
-        `None`
-            If you cannot comment on the given parent **of**.
         """
 
         errors = []
