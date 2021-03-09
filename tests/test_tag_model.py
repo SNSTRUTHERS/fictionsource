@@ -66,6 +66,7 @@ class TagModelTestCase(TestCase):
         self.assertEqual(tag1._type, Tag.Type.GENERIC)
         self.assertEqual(tag1.name, "test")
         self.assertEqual(tag1.query_name, "#test")
+        self.assertEqual(tag1.url_safe_query_name, "%23test")
         self.assertEqual(len(tag1.stories), 0)
         self.assertRaises(ValueError, Tag.new, "generic", "test")
 
@@ -74,6 +75,7 @@ class TagModelTestCase(TestCase):
         self.assertEqual(tag2._type, Tag.Type.CATEGORY)
         self.assertEqual(tag2.name, "test")
         self.assertEqual(tag2.query_name, "category:test")
+        self.assertEqual(tag2.url_safe_query_name, "category:test")
         self.assertEqual(len(tag2.stories), 0)
         self.assertRaises(ValueError, Tag.new, "category", "test")
 

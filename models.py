@@ -772,6 +772,10 @@ class Tag(IJsonableModel):
             return f"{self.type}:{self.name}"
 
     @property
+    def url_safe_query_name(self) -> str:
+        return self.query_name.replace('#', "%23")
+
+    @property
     def type(self) -> str:
         """Returns the tag type as a string."""
 
