@@ -311,16 +311,17 @@ window.onload = async () => {
         tag.classList.add("tag");
         
         if (name.includes(':')) {
-            const split = name.split(':')
-            tag.classList.add(split[0])
-            name = split[1]
+            const split = name.split(':');
+            tag.classList.add(split[0]);
+            name = split[1];
         } else if (name.startsWith('#')) {
             name = name.slice(1);
+            tag.classList.add("generic");
         }
         
         tag.appendChild(document.createElement("span"));
 
-        const span = document.createElement("div");
+        const span = document.createElement("span");
         span.innerText = name;
         tag.appendChild(span);
 
