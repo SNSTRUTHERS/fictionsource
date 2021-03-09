@@ -733,7 +733,7 @@ window.onload = async () => {
             t.appendChild(text);
 
             const num = document.createElement("small");
-            num.innerText = count !== null ? count : "(category)";
+            num.innerText = count !== null ? count : "(tag type)";
             t.appendChild(num);
 
             tagOptionsList.appendChild(t);
@@ -752,7 +752,7 @@ window.onload = async () => {
     // copy tag in options listing to input box
     const setTagInput = (item) => {
         tagInput.value = item.children[0].innerText;
-        if (item.children[1].innerText === "(category)")
+        if (item.children[1].innerText === "(tag type)")
             tagInput.value += ':';
 
         if (tagInput.value === "generic:")
@@ -812,7 +812,7 @@ window.onload = async () => {
     // remove tag
     storyTagsForm.onclick = async (event) => {
         const target = event.target.parentElement;
-        if (target.classList.contains("tag")) {
+        if (target.classList.contains("tag") && event.target.classList.contains("delete")) {
             if (!coverIsHidden())
                 return;
             showCover();
@@ -846,6 +846,13 @@ window.onload = async () => {
         showCover();
 
         const tagQueryName = tagInput.value.trim();
+        if (tagQueryName.indexOf(':') < 0 && tagQueryName[0] !== '#') {
+            alert("ERROR:\nTag must have a type (e.g. genre:tagname) or start with a hash (#).");
+
+            storyTagsForm.classList.remove("loading");
+            hideCover();
+            return;
+        }
 
         try {
             await apiCall(`story/${currentStory().dataset['id']}/tags`, "PUT", [
@@ -859,6 +866,7 @@ window.onload = async () => {
         }
 
         tagInput.value = "";
+        tagOptionsList.innerHTML = "";
         storyTagsForm.classList.remove("loading");
         hideCover();
     };
