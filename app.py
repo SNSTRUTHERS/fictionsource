@@ -492,8 +492,13 @@ def edit_user_details(username: str):
     elif request.form["type"] == "url" and request.form["url"] != "": # url
         updates['image'] = request.form["url"]
 
+    updates["allow_risque"] = "nsfw_filter" not in request.form
+
     if len(errors) == 0:
         errors = user.update(**updates)
+
+        if 'username' in updates:
+            username = updates['username']
     
     for error in errors:
         flash(error, "error")

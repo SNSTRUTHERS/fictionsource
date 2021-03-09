@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Story model tests."""
+"""User API tests."""
 
 from unittest import TestCase, main
 
@@ -48,13 +48,13 @@ class UserAPITestCase(TestCase):
         """Tests retrieving a user's information."""
 
         # nonexistant user request
-        response = self.client.get("/api/user/nonexistantuser")
+        response: Response = self.client.get("/api/user/nonexistantuser")
         self.assertEqual(response.json['code'], 404)
         self.assertEqual(response.json['type'], 'error')
         self.assertIn("Invalid username.", response.json['errors'])
 
         # anonymous/unprivileged user data request
-        response: Response = self.client.get(f"/api/user/{USERDATA[0]['username']}")
+        response = self.client.get(f"/api/user/{USERDATA[0]['username']}")
         self.assertEqual(response.json['code'], 200)
         self.assertEqual(response.json['type'], 'success')
 
@@ -65,13 +65,38 @@ class UserAPITestCase(TestCase):
         self.assertEqual(data["image"], User.DEFAULT_IMAGE_URI)
         self.assertEqual(from_timestamp(data['joined']), USERDATA[0]['joined'])
         self.assertFalse(data['is_moderator'])
-        self.assertEqual(data['allow_risque'], USERDATA[0]['flags'] & User.Flags.ALLOW_RISQUE > 0)
         self.assertEqual(data["stories"], [])
         self.assertEqual(data["following"], [])
         self.assertEqual(data["followed_by"], [])
         self.assertEqual(data["favorite_stories"], [])
         self.assertEqual(data["followed_stories"], [])
         self.assertNotIn('comments', data)
+        self.assertNotIn('allow_risque', data)
+        
+        with self.client.session_transaction() as session:
+            session[CURR_USER_KEY] = self.user_ids[1]
+        
+        response = self.client.get(f"/api/user/{USERDATA[0]['username']}")
+        self.assertEqual(response.json['code'], 200)
+        self.assertEqual(response.json['type'], 'success')
+
+        data = response.json['data']
+        self.assertEqual(data["username"], USERDATA[0]['username'])
+        self.assertEqual(from_timestamp(data['birthdate'], True), USERDATA[0]['birthdate'])
+        self.assertEqual(data["description"], USERDATA[0]['description'])
+        self.assertEqual(data["image"], User.DEFAULT_IMAGE_URI)
+        self.assertEqual(from_timestamp(data['joined']), USERDATA[0]['joined'])
+        self.assertFalse(data['is_moderator'])
+        self.assertEqual(data["stories"], [])
+        self.assertEqual(data["following"], [])
+        self.assertEqual(data["followed_by"], [])
+        self.assertEqual(data["favorite_stories"], [])
+        self.assertEqual(data["followed_stories"], [])
+        self.assertNotIn('comments', data)
+        self.assertNotIn('allow_risque', data)
+        
+        with self.client.session_transaction() as session:
+            del session[CURR_USER_KEY]
         
         # priviledged user data request
         response = self.client.get(f"/api/user/{USERDATA[0]['username']}", headers={
@@ -89,16 +114,17 @@ class UserAPITestCase(TestCase):
         self.assertEqual(data["image"], User.DEFAULT_IMAGE_URI)
         self.assertEqual(from_timestamp(data['joined']), USERDATA[0]['joined'])
         self.assertFalse(data['is_moderator'])
-        self.assertEqual(data['allow_risque'], USERDATA[0]['flags'] & User.Flags.ALLOW_RISQUE > 0)
         self.assertEqual(data["stories"], [])
         self.assertEqual(data["following"], [])
         self.assertEqual(data["followed_by"], [])
         self.assertEqual(data["favorite_stories"], [])
         self.assertEqual(data["followed_stories"], [])
         self.assertEqual(data["comments"], [])
+        self.assertEqual(data['allow_risque'], USERDATA[0]['flags'] & User.Flags.ALLOW_RISQUE > 0)
 
         with self.client.session_transaction() as session:
             session[CURR_USER_KEY] = self.user_ids[0]
+
         response = self.client.get(f"/api/user/{USERDATA[0]['username']}")
         self.assertEqual(response.json['code'], 200)
         self.assertEqual(response.json['type'], 'success')
@@ -110,13 +136,13 @@ class UserAPITestCase(TestCase):
         self.assertEqual(data["image"], User.DEFAULT_IMAGE_URI)
         self.assertEqual(from_timestamp(data['joined']), USERDATA[0]['joined'])
         self.assertFalse(data['is_moderator'])
-        self.assertEqual(data['allow_risque'], USERDATA[0]['flags'] & User.Flags.ALLOW_RISQUE > 0)
         self.assertEqual(data["stories"], [])
         self.assertEqual(data["following"], [])
         self.assertEqual(data["followed_by"], [])
         self.assertEqual(data["favorite_stories"], [])
         self.assertEqual(data["followed_stories"], [])
         self.assertEqual(data["comments"], [])
+        self.assertEqual(data['allow_risque'], USERDATA[0]['flags'] & User.Flags.ALLOW_RISQUE > 0)
 
     def test_patch(self):
         """Tests modifying user data."""

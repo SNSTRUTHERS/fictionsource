@@ -56,6 +56,25 @@
             </div>
 
             <h4>NSFW Filter</h4>
+            <p>You must be at least 18 years old to alter this setting.</p>
+
+            <span>OFF </span>
+            <input
+                type="checkbox"
+                name="nsfw_filter"
+                value="1"
+            {% if not user.is_18plus %}
+                style="--color-r: 128; --color-g: 128; --color-b: 128;"
+                disabled
+            {% else %}
+                style="--color-r: 255; --color-g: 0; --color-b: 0;"
+            {% endif %}
+            
+            {% if not user.allow_risque %}
+                checked
+            {% endif%}
+            >
+            <span> ON</span>
 
             <h4>Profile Picture</h4>
         {% include "imgform.1.html.j2" %}

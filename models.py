@@ -406,10 +406,7 @@ class User(IJsonableModel):
                     lambda story: story.visible(user),
                     reversed(self.stories)
                 )
-            ],
-
-            "allow_risque": self.allow_risque,
-            "is_moderator": self.is_moderator
+            ]
         }
 
         if user is not None and user.is_moderator:
@@ -422,6 +419,7 @@ class User(IJsonableModel):
                 comment.expand(user, expand, expanded)
                 for comment in self.comments
             ]
+            d["allow_risque"] = self.allow_risque
 
         return d
 
@@ -522,6 +520,8 @@ class User(IJsonableModel):
         if allow_risque is not None:
             if type(allow_risque) != bool:
                 errors.append("'allow_risque' must be a boolean.")
+            elif allow_risque and not self.is_18plus:
+                errors.append("Must be at least 18 years of age to change this setting.")
             elif allow_risque != self.allow_risque:
                 self.allow_risque = allow_risque
                 modified = True
@@ -530,6 +530,12 @@ class User(IJsonableModel):
             db.session.commit()
 
         return errors
+
+    @property
+    def is_18plus(self) -> bool:
+        """Returns whether the given user can alter their allow_risque setting."""
+
+        return datetime.date.today() + relativedelta(years=-18) >= self.birthdate
 
     @property
     def allow_risque(self) -> bool:
@@ -641,7 +647,7 @@ class User(IJsonableModel):
             errors.append("'password' must be at least 6 characters long.")
 
         if birthdate > datetime.date.today() + relativedelta(years=-13):
-            errors.append("Must be at least 13 years of age to regitser.")
+            errors.append("Must be at least 13 years of age to register.")
         elif birthdate < datetime.date(year=1900, month=1, day=1):
             errors.append("Invalid birthdate.")
 
