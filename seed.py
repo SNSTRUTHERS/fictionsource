@@ -62,91 +62,23 @@ def seed_db(db: SQLAlchemy) -> None:
 
     # Add tags
     tags = (
-        Tag(
-            _type = Tag.Type.CATEGORY,
-            name = "fanfiction",
-            description = "Works not based on pre-existing intellectual property."
-        ),
-        Tag(
-            _type = Tag.Type.CATEGORY,
-            name = "original",
-            description = "Works based on one's own ideas."
-        ),
-        Tag(
-            _type = Tag.Type.CATEGORY,
-            name = "crossover",
-            description = "Works that involve multiple continuities interacting with each other."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "action",
-            description = "Action packed."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "angst",
-            description = "Dripping with teenage angst."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "adventure",
-            description = "Exciting & adventurous."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "comedy",
-            description = "Laid back & comedic."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "drama",
-            description = "Dramatic storytelling."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "fantasy",
-            description = "Fantastical and out-of-this-world."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "friendship",
-            description = "Tales of kinship."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "horror",
-            description = "Horror stories."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "melodrama",
-            description = "Overly dramatic storytelling."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "psychothriller",
-            description = "Psychological thrillers."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "romance",
-            description = "For all the shippers."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "science_fiction",
-            description = "Literally out-of-this-world."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "suspense",
-            description = "Nail biting."
-        ),
-        Tag(
-            _type = Tag.Type.GENRE,
-            name = "thriller",
-            description = "So exciting you can't look away."
-        )
+        Tag.new("category", "fanfiction",   commit=False),
+        Tag.new("category", "original",     commit=False),
+        Tag.new("category", "crossover",    commit=False),
+        Tag.new("genre", "action",          commit=False),
+        Tag.new("genre", "angst",           commit=False),
+        Tag.new("genre", "adventure",       commit=False),
+        Tag.new("genre", "comedy",          commit=False),
+        Tag.new("genre", "drama",           commit=False),
+        Tag.new("genre", "fantasy",         commit=False),
+        Tag.new("genre", "friendship",      commit=False),
+        Tag.new("genre","horror",           commit=False),
+        Tag.new("genre", "melodrama",       commit=False),
+        Tag.new("genre", "psychothriller",  commit=False),
+        Tag.new("genre", "romance",         commit=False),
+        Tag.new("genre", "science_fiction", commit=False),
+        Tag.new("genre", "suspense",        commit=False),
+        Tag.new("genre", "thriller",        commit=False),
     )
 
     db.session.add_all(tags)
@@ -154,31 +86,13 @@ def seed_db(db: SQLAlchemy) -> None:
 
     # Add stories
     stories = (
-        Story(
-            author_id  = users[0].id,
-            title      = "The Youth Revolution",
-            posted     = datetime(
-                year   = 2020,
-                month  = 12,
-                day    = 29,
-                hour   = 16,
-                minute = 3,
-                second = 6,
-                tzinfo = timezone.utc,
-            ),
-            modified   = datetime(
-                year   = 2020,
-                month  = 12,
-                day    = 29,
-                hour   = 16,
-                minute = 3,
-                second = 6,
-                tzinfo = timezone.utc
-            ),
-            summary = "A young, naive, and upstart politician with high ambitions " +
+        Story.new(
+            users[0],
+            "The Youth Revolution",
+            "A young, naive, and upstart politician with high ambitions " +
                 "runs for president and is dealt an uphill battle and a swift dose " +
                 "of reality.",
-            flags = Story.Flags.DEFAULT
+            commit = False
         ),
     )
 
@@ -187,7 +101,6 @@ def seed_db(db: SQLAlchemy) -> None:
 
     stories[0].tags.append(tags[1])
     stories[0].tags.append(tags[15])
-
 
     # Add chapters
     chapters = (
@@ -235,12 +148,15 @@ Nulla urna nibh, scelerisque at ex quis, suscipit vulputate quam. Fusce ultricie
 tempus. Vivamus imperdiet nisi at mauris porta pellentesque ac ac ante. Vivamus fringilla a elit non
 molestie. Vestibulum vehicula nibh ac nulla tempus, et rutrum ipsum molestie. Praesent pharetra
 gravida massa, vitae mollis diam. 
-"""
+""", commit=False
         ),
-        Chapter.new(stories[0], "Meeting with the Party Elites"),
-        Chapter.new(stories[0], "The February Debate"),
-        Chapter.new(stories[0], "The Campaign Begins")
+        Chapter.new(stories[0], "Meeting with the Party Elites", commit=False),
+        Chapter.new(stories[0], "The February Debate", commit=False),
+        Chapter.new(stories[0], "The Campaign Begins", commit=False)
     )
+
+    db.session.add_all(chapters)
+    db.session.commit()
 
     chapters[0].update(private=False)
     stories[0].update(private=False)
