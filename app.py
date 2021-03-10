@@ -1692,8 +1692,8 @@ if __name__ == "__main__":
         debug = DebugToolbarExtension(app)
         app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 
-    app.config['SQLALCHEMY_ECHO'] = True
-    connect_db(app)
+    app.config['SQLALCHEMY_ECHO'] = "--disable-sqlalchemy-printout" not in argv
+    db.init_app(app)
 
     if "--clear-database" in argv or "--seed-database" in argv:
         db.drop_all()
