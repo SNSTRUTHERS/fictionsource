@@ -1688,7 +1688,7 @@ if __name__ == "__main__":
 
     from seed import seed_db
 
-    if "--no-debug-toolbar" not in argv:
+    if "--enable-debug-toolbar" in argv:
         debug = DebugToolbarExtension(app)
         app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 
