@@ -1,1 +1,1 @@
-web: gunicorn app:main
+web: uwsgi --http-socket --wsgi-file main.py

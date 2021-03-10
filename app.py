@@ -1702,7 +1702,7 @@ def run_app():
         if "--seed-database" in argv:
             seed_db(db)
     
-    app.run()
+    app.run(debug=False)
 
 if __name__ == "__main__":
     run_app()
