@@ -7,7 +7,7 @@ from unittest import TestCase, main
 from flask.wrappers import Response
 
 from models import (
-    Chapter, connect_db, db, FavoriteStory, FollowingStory, from_timestamp, Story, User
+    Chapter, connect_db, db, FavoriteStory, FollowingStory, from_timestamp, RefImage, Story, User
 )
 from dbcred import get_database_uri
 
@@ -28,8 +28,17 @@ class StoryAPITestCase(TestCase):
         db.drop_all()
         db.create_all()
 
+        db.session.add_all((
+            RefImage(_url=User.DEFAULT_IMAGE_URI),
+            RefImage(_url=Story.DEFAULT_THUMBNAIL_URI)
+        ))
+        db.session.commit()
+
     def setUp(self) -> None:
         super().setUp()
+
+        for img in RefImage.query.filter(~RefImage.id.in_({1, 2})).all():
+            db.session.delete(img)
 
         FavoriteStory.query.delete()
         FollowingStory.query.delete()

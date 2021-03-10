@@ -4,7 +4,7 @@
 
 from unittest import TestCase, main
 
-from models import connect_db, db, User, Story
+from models import connect_db, db, RefImage, Story, User
 from dbcred import get_database_uri
 
 from datetime import date
@@ -25,8 +25,17 @@ class UserModelTestCase(TestCase):
         db.drop_all()
         db.create_all()
 
+        db.session.add_all((
+            RefImage(_url=User.DEFAULT_IMAGE_URI),
+            RefImage(_url=Story.DEFAULT_THUMBNAIL_URI)
+        ))
+        db.session.commit()
+
     def setUp(self) -> None:
         super().setUp()
+
+        for img in RefImage.query.filter(~RefImage.id.in_({1, 2})).all():
+            db.session.delete(img)
 
         Story.query.delete()
         User.query.delete()
@@ -82,7 +91,7 @@ class UserModelTestCase(TestCase):
         self.assertEqual(user.username, "testuser")
         self.assertEqual(user.email, "test@gmail.com")
         self.assertEqual(user.birthdate, bday)
-        self.assertEqual(user.image, User.DEFAULT_IMAGE_URI)
+        self.assertEqual(user.image.url, User.DEFAULT_IMAGE_URI)
         self.assertIsNone(user.description)
         self.assertEqual(user.flags, User.Flags.DEFAULT)
         self.assertFalse(user.is_moderator)
@@ -129,7 +138,7 @@ class UserModelTestCase(TestCase):
         self.assertEqual(user.username, "testuser")
         self.assertFalse(user.allow_risque)
         self.assertEqual(user.email, "test@gmail.com")
-        self.assertEqual(user.image, User.DEFAULT_IMAGE_URI)
+        self.assertEqual(user.image.url, User.DEFAULT_IMAGE_URI)
         self.assertIsNone(user.description)
         hashed_pwd = user.password
 
@@ -189,19 +198,19 @@ class UserModelTestCase(TestCase):
         self.assertEqual(user.email, "test2@gmail.com")
 
         self.assertEqual(len(user.update(image=False)), 1)
-        self.assertEqual(user.image, User.DEFAULT_IMAGE_URI)
+        self.assertEqual(user.image.url, User.DEFAULT_IMAGE_URI)
         self.assertEqual(len(user.update(image=100)), 1)
-        self.assertEqual(user.image, User.DEFAULT_IMAGE_URI)
+        self.assertEqual(user.image.url, User.DEFAULT_IMAGE_URI)
         self.assertEqual(len(user.update(image=11.1111)), 1)
-        self.assertEqual(user.image, User.DEFAULT_IMAGE_URI)
+        self.assertEqual(user.image.url, User.DEFAULT_IMAGE_URI)
         self.assertEqual(len(user.update(image=[])), 1)
-        self.assertEqual(user.image, User.DEFAULT_IMAGE_URI)
+        self.assertEqual(user.image.url, User.DEFAULT_IMAGE_URI)
         self.assertEqual(len(user.update(image={'lol': 'abcd'})), 1)
-        self.assertEqual(user.image, User.DEFAULT_IMAGE_URI)
+        self.assertEqual(user.image.url, User.DEFAULT_IMAGE_URI)
         self.assertEqual(len(user.update(image="image_url")), 0)
-        self.assertEqual(user.image, "image_url")
+        self.assertEqual(user.image.url, "image_url")
         self.assertEqual(len(user.update(image="")), 0)
-        self.assertEqual(user.image, User.DEFAULT_IMAGE_URI)
+        self.assertEqual(user.image.url, User.DEFAULT_IMAGE_URI)
 
         self.assertEqual(len(user.update(description=True)), 1)
         self.assertIsNone(user.description)

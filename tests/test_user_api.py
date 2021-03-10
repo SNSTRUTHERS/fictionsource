@@ -6,7 +6,7 @@ from unittest import TestCase, main
 
 from flask.wrappers import Response
 
-from models import connect_db, db, FollowingUser, from_timestamp, Story, User
+from models import connect_db, db, FollowingUser, from_timestamp, RefImage, Story, User
 from dbcred import get_database_uri
 
 from tests.test_api import generate_basicauth_credentials, USERDATA
@@ -26,8 +26,17 @@ class UserAPITestCase(TestCase):
         db.drop_all()
         db.create_all()
 
+        db.session.add_all((
+            RefImage(_url=User.DEFAULT_IMAGE_URI),
+            RefImage(_url=Story.DEFAULT_THUMBNAIL_URI)
+        ))
+        db.session.commit()
+
     def setUp(self) -> None:
         super().setUp()
+
+        for img in RefImage.query.filter(~RefImage.id.in_({1, 2})).all():
+            db.session.delete(img)
 
         FollowingUser.query.delete()
         Story.query.delete()

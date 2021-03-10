@@ -6,7 +6,7 @@ from unittest import TestCase, main
 
 from flask.wrappers import Response
 
-from models import BCRYPT, Chapter, connect_db, db, Story, User
+from models import BCRYPT, Chapter, connect_db, db, RefImage, Story, User
 from dbcred import get_database_uri
 
 from datetime import date, datetime, timezone
@@ -162,8 +162,17 @@ class GeneralAPITestCase(TestCase):
         db.drop_all()
         db.create_all()
 
+        db.session.add_all((
+            RefImage(_url=User.DEFAULT_IMAGE_URI),
+            RefImage(_url=Story.DEFAULT_THUMBNAIL_URI)
+        ))
+        db.session.commit()
+
     def setUp(self) -> None:
         super().setUp()
+
+        for img in RefImage.query.filter(~RefImage.id.in_({1, 2})).all():
+            db.session.delete(img)
 
         self.client = app.test_client()
         

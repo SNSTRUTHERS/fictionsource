@@ -4,7 +4,7 @@
 
 from unittest import TestCase, main
 
-from models import Chapter, connect_db, db, Story, User
+from models import Chapter, connect_db, db, RefImage, Story, User
 from dbcred import get_database_uri
 
 from datetime import date
@@ -24,8 +24,17 @@ class StoryModelTestCase(TestCase):
         db.drop_all()
         db.create_all()
 
+        db.session.add_all((
+            RefImage(_url=User.DEFAULT_IMAGE_URI),
+            RefImage(_url=Story.DEFAULT_THUMBNAIL_URI)
+        ))
+        db.session.commit()
+
     def setUp(self) -> None:
         super().setUp()
+
+        for img in RefImage.query.filter(~RefImage.id.in_({1, 2})).all():
+            db.session.delete(img)
 
         Chapter.query.delete()
         Story.query.delete()
@@ -73,19 +82,13 @@ class StoryModelTestCase(TestCase):
         self.assertRaises(ValueError, Story.new, self.testuser, "test", 321)
         self.assertRaises(ValueError, Story.new, self.testuser, "test", False)
         self.assertRaises(ValueError, Story.new, self.testuser, "test", 3.2)
-
-        # thumbnail_url must be a string
-        self.assertRaises(ValueError, Story.new, self.testuser, "test", "", None)
-        self.assertRaises(ValueError, Story.new, self.testuser, "test", "", True)
-        self.assertRaises(ValueError, Story.new, self.testuser, "test", "", 11)
-        self.assertRaises(ValueError, Story.new, self.testuser, "test", "", 77.328)
         
         story1 = Story.new(self.testuser, "test")
         self.assertEqual(story1.author, self.testuser)
         self.assertEqual(story1.flags, Story.Flags.DEFAULT)
         self.assertEqual(story1.title, "test")
         self.assertEqual(story1.summary, "")
-        self.assertEqual(story1.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story1.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
         self.assertIn(story1, self.testuser.stories)
         self.assertEqual(len(self.testuser.stories), 1)
         self.assertEqual(len(story1.tags), 0)
@@ -100,7 +103,7 @@ class StoryModelTestCase(TestCase):
         self.assertEqual(story2.flags, Story.Flags.DEFAULT)
         self.assertEqual(story2.title, "test 2")
         self.assertEqual(story2.summary, story2summary)
-        self.assertEqual(story2.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story2.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
         self.assertIn(story1, self.testuser.stories)
         self.assertIn(story2, self.testuser.stories)
         self.assertEqual(len(self.testuser.stories), 2)
@@ -234,7 +237,7 @@ class StoryModelTestCase(TestCase):
         self.assertTrue(story.private)
         self.assertTrue(story.can_comment)
         self.assertFalse(story.is_risque)
-        self.assertEqual(story.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
         
         self.assertEqual(len(story.update(title=123)), 1)
         self.assertEqual(story.title, "test")
@@ -253,7 +256,7 @@ class StoryModelTestCase(TestCase):
 
         self.assertEqual(len(story.update(title=122, thumbnail = 5)), 2)
         self.assertEqual(story.title, "Test")
-        self.assertEqual(story.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
         self.assertEqual(len(story.update(private="hello")), 1)
         self.assertTrue(story.private)
         
@@ -315,19 +318,19 @@ class StoryModelTestCase(TestCase):
         self.assertFalse(story.is_risque)
         
         self.assertEqual(len(story.update(thumbnail=False)), 1)
-        self.assertEqual(story.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
         self.assertEqual(len(story.update(thumbnail=125)), 1)
-        self.assertEqual(story.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
         self.assertEqual(len(story.update(thumbnail=-0.8)), 1)
-        self.assertEqual(story.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
         self.assertEqual(len(story.update(thumbnail=[])), 1)
-        self.assertEqual(story.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
         self.assertEqual(len(story.update(thumbnail={})), 1)
-        self.assertEqual(story.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
         self.assertEqual(len(story.update(thumbnail="abc")), 0)
-        self.assertEqual(story.thumbnail, "abc")
+        self.assertEqual(story.thumbnail.url, "abc")
         self.assertEqual(len(story.update(thumbnail="")), 0)
-        self.assertEqual(story.thumbnail, Story.DEFAULT_THUMBNAIL_URI)
+        self.assertEqual(story.thumbnail.url, Story.DEFAULT_THUMBNAIL_URI)
 
         self.assertEqual(len(story.update(summary=True)), 1)
         self.assertEqual(story.summary, "")

@@ -4,7 +4,7 @@
 
 from unittest import TestCase, main
 
-from models import connect_db, db, User, Story, Chapter
+from models import Chapter, connect_db, db, RefImage, Story, User
 from dbcred import get_database_uri
 
 from datetime import date
@@ -24,8 +24,17 @@ class ChapterModelTestCase(TestCase):
         db.drop_all()
         db.create_all()
 
+        db.session.add_all((
+            RefImage(_url=User.DEFAULT_IMAGE_URI),
+            RefImage(_url=Story.DEFAULT_THUMBNAIL_URI)
+        ))
+        db.session.commit()
+
     def setUp(self) -> None:
         super().setUp()
+
+        for img in RefImage.query.filter(~RefImage.id.in_({1, 2})).all():
+            db.session.delete(img)
 
         Chapter.query.delete()
         Story.query.delete()
