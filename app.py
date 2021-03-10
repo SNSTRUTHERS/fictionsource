@@ -483,6 +483,8 @@ def edit_user_details(username: str):
     if request.form["description"] != "":
         updates['description'] = request.form["description"]
 
+    filename = None
+    f = None
     if request.form["type"] == "file": # file upload
         f = request.files["file"]
         
@@ -492,7 +494,6 @@ def edit_user_details(username: str):
             while path.exists(filename[1:]):
                 filename = f"images/users/{token_urlsafe(64)}.{ext}"
             
-            f.save(path.join(app.static_folder, filename))
             updates['image'] = '/static/' + filename
     elif request.form["type"] == "url" and request.form["url"] != "": # url
         updates['image'] = request.form["url"]
@@ -504,6 +505,9 @@ def edit_user_details(username: str):
 
         if 'username' in updates:
             username = updates['username']
+            
+            if filename is not None:
+                f.save(path.join(app.static_folder, filename))
     
     for error in errors:
         flash(error, "error")
