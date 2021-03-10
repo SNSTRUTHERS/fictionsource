@@ -1679,7 +1679,7 @@ def tag_listing(tag_name: str):
 
 # == START SERVER ================================================================================ #
 
-if __name__ == "__main__":
+def main():
     from flask_debugtoolbar import DebugToolbarExtension
     from sys import argv
 
@@ -1693,7 +1693,7 @@ if __name__ == "__main__":
         app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 
     app.config['SQLALCHEMY_ECHO'] = "--disable-sqlalchemy-printout" not in argv
-    db.init_app(app)
+    connect_db(app)
 
     if "--clear-database" in argv or "--seed-database" in argv:
         db.drop_all()
@@ -1703,3 +1703,6 @@ if __name__ == "__main__":
             seed_db(db)
     
     app.run()
+
+if __name__ == "__main__":
+    main()
