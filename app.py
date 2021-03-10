@@ -10,7 +10,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 
 from math import ceil
-from os import path, environ
+from os import getcwd, path, environ
 from random import shuffle
 from secrets import token_urlsafe
 
@@ -488,13 +488,12 @@ def edit_user_details(username: str):
         
         ext = f.filename.rsplit('.', 1)[1]
         if allowed_file(f.filename):
-            filename = f"/static/images/users/{token_urlsafe(64)}.{ext}"
+            filename = f"images/users/{token_urlsafe(64)}.{ext}"
             while path.exists(filename[1:]):
-                filename = f"/static/images/users/{token_urlsafe(64)}.{ext}"
-
-            f.save(filename)
-
-            updates['image'] = filename
+                filename = f"images/users/{token_urlsafe(64)}.{ext}"
+            
+            f.save(path.join(app.static_folder, filename))
+            updates['image'] = '/static/' + filename
     elif request.form["type"] == "url" and request.form["url"] != "": # url
         updates['image'] = request.form["url"]
 
@@ -558,11 +557,12 @@ def change_story_thumbnail(story_id: int):
         
         ext = f.filename.rsplit('.', 1)[1]
         if allowed_file(f.filename):
-            filename = f"/static/images/thumbnails/{token_urlsafe(64)}.{ext}"
+            filename = f"images/thumbnails/{token_urlsafe(64)}.{ext}"
             while path.exists(filename[1:]):
-                filename = f"/static/images/thumbnails/{token_urlsafe(64)}.{ext}"
+                filename = f"images/thumbnails/{token_urlsafe(64)}.{ext}"
 
-            f.save(filename)
+            f.save(path.join(app.static_folder, filename))
+            filename = "/static/" + filename
     elif request.form["type"] == "url": # url
         filename = request.form["url"]
 
