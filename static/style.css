@@ -259,9 +259,9 @@ input[type="checkbox"]:checked:active {
     );
 }
 input[type="checkbox"]:disabled {
-    --color-r: 128;
-    --color-g: 128;
-    --color-b: 128;
+    --color-r: 128 !important;
+    --color-g: 128 !important;
+    --color-b: 128 !important;
 }
 
 input[type="checkbox"]::before {

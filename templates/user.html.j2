@@ -64,7 +64,6 @@
                 name="nsfw_filter"
                 value="1"
             {% if not user.is_18plus %}
-                style="--color-r: 128; --color-g: 128; --color-b: 128;"
                 disabled
             {% else %}
                 style="--color-r: 255; --color-g: 0; --color-b: 0;"
