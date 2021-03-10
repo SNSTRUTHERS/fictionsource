@@ -614,12 +614,12 @@ window.onload = async () => {
 
         switch (event.target.nodeName.toLowerCase()) {
         case "i":
-            const chapterTitle = parent.getElementsByTagName("div")[0] ?
+            const chapterName = parent.getElementsByTagName("div")[0] ?
                 parent.getElementsByTagName("div")[0].innerText : null
             ;
 
             if (event.target.classList.contains("delete") &&
-                confirm(`Are you sure you want to delete "${chapterTitle}"?`)
+                confirm(`Are you sure you want to delete "${chapterName}"?`)
             ) {
                 await apiCall(`chapter/${parent.dataset["id"]}`, "DELETE");
                 
