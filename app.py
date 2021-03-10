@@ -307,6 +307,19 @@ def root():
     ]
 
     if g.user != None:
+        stories_following = Story.visible_stories(g.user).filter(
+            Story.id.in_([ story.id for story in g.user.followed_stories ])
+        ).order_by(
+            Story.modified.desc()
+        ).slice(0, 10).all()
+
+        if len(stories_following) > 0:
+            sections.append({
+                "id": "followed-stories",
+                "name": "Stories You're Following",
+                "stories": stories_following
+            })
+        
         people_following = Story.visible_stories(g.user).filter(
             Story.author_id.in_([ user.id for user in g.user.following ])
         ).order_by(
@@ -318,21 +331,10 @@ def root():
                 "id": "following",
                 "name": "People You're Following",
                 "stories": people_following,
-                "link": "^following"
-            })
-
-        stories_following = Story.visible_stories(g.user).filter(
-            Story.id.in_([ story.id for story in g.user.followed_stories ])
-        ).order_by(
-            Story.modified.desc()
-        ).slice(0, 10).all()
-
-        if len(stories_following) > 0:
-            sections.append({
-                "id": "followed-stories",
-                "name": "Stories You're Following",
-                "stories": stories_following,
-                "link": "^following"
+                "link": (
+                    "/read?sort_by=posted&q=" +
+                    "+".join(f"user:{user.username}" for user in g.user.following)
+                )
             })
 
     for genre in genres:
