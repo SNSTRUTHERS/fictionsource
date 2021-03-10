@@ -1679,7 +1679,7 @@ def tag_listing(tag_name: str):
 
 # == START SERVER ================================================================================ #
 
-def main():
+def run_app():
     from flask_debugtoolbar import DebugToolbarExtension
     from sys import argv
 
@@ -1705,4 +1705,4 @@ def main():
     app.run()
 
 if __name__ == "__main__":
-    main()
+    run_app()
