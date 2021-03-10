@@ -10,7 +10,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 
 from math import ceil
-from os import path
+from os import path, environ
 from random import shuffle
 from secrets import token_urlsafe
 
@@ -40,14 +40,18 @@ app.config['SECRET_KEY'] = get_key()
 app.config['MAX_CONTENT_PATH'] = 1 << 22
 
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-if app.config['SQLALCHEMY_DATABASE_URI'] is None:
-    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
-        "fictionsource",
-        cred_file = None,
-        save = False
+
+if 'DATABASE_URL' not in environ:
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri()
+    if app.config['SQLALCHEMY_DATABASE_URI'] is None:
+        app.config['SQLALCHEMY_DATABASE_URI'] = get_database_uri(
+            "fictionsource",
+            cred_file = None,
+            save = False
     )
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = environ['DATABASE_URL']
 
 def to_jsontype(t: type):
     """Converts a Python type to a string."""
