@@ -262,7 +262,7 @@ class RefImage(db.Model):
 
     id: int = db.Column(db.Integer, primary_key=True)
 
-    _url: Optional[str] = db.Column(db.String)
+    _url: Optional[str] = db.Column(db.String, index=True)
 
     data: Optional[bytes] = db.Column(db.LargeBinary)
     content_type: Optional[str] = db.Column(db.String)
@@ -531,7 +531,11 @@ class User(IJsonableModel):
                 elif re.match(r"/image/([0-9]+)", image) is not None:
                     self.image_id = int(image[7:])
                 else:
-                    new_image = RefImage(_url=image)
+                    img = RefImage.query.filter_by(_url=image).first()
+                    if img is not None:
+                        self.image_id = img.id
+                    else:
+                        new_image = RefImage(_url=image)
                 modified = True
 
         if description is not None:
@@ -1157,7 +1161,11 @@ class Story(IJsonableModel):
                 elif re.match(r"/image/([0-9]+)", thumbnail) is not None:
                     self.thumbnail_id = int(thumbnail[7:])
                 else:
-                    new_image = RefImage(_url=thumbnail)
+                    img = RefImage.query.filter_by(_url=thumbnail).first()
+                    if img is not None:
+                        self.thumbnail_id = img.id
+                    else:
+                        new_image = RefImage(_url=thumbnail)
                 update_timestamp = True
 
         if summary is not None:
