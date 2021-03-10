@@ -255,6 +255,24 @@ class IMarkdownModel(IJsonableModel):
 
 # == DATABASE MODELS ============================================================================= #
 
+class RefImage(db.Model):
+    """A database image."""
+
+    __tablename__ = "images"
+
+    id: int = db.Column(db.Integer, primary_key=True)
+
+    _url: Optional[str] = db.Column(db.String)
+
+    data: Optional[bytes] = db.Column(db.LargeBinary)
+    content_type: Optional[str] = db.Column(db.String)
+
+    @property
+    def url(self) -> str:
+        """Retrieves the URL to get this image."""
+
+        return self._url if self._url is not None else f"/image/{self.id}"
+
 class User(IJsonableModel):
     """A `fictionsource` user."""
 
@@ -303,9 +321,10 @@ class User(IJsonableModel):
         nullable = False
     )
 
-    image: str = db.Column(db.Text,
+    image_id: int = db.Column(db.Integer,
+        db.ForeignKey("images.id"),
         nullable = False,
-        default  = DEFAULT_IMAGE_URI
+        default  = 1
     )
     
     description: Optional[str] = db.Column(db.Text)
@@ -318,6 +337,12 @@ class User(IJsonableModel):
     is_moderator: bool = db.Column(db.Boolean,
         nullable = False,
         default  = False
+    )
+
+    image: RefImage = db.relationship("RefImage",
+        primaryjoin = "(RefImage.id == User.image_id)",
+        cascade     = "all,delete",
+        uselist     = False
     )
 
     stories: List["Story"] = db.relationship("Story",
@@ -373,7 +398,7 @@ class User(IJsonableModel):
             "username": self.username,
             "birthdate": to_timestamp(self.birthdate),
             "joined": to_timestamp(self.joined),
-            "image": self.image,
+            "image": self.image.url,
             "description": self.description,
 
             "is_moderator": self.is_moderator,
@@ -457,6 +482,7 @@ class User(IJsonableModel):
 
         errors = []
         modified = False
+        new_image: Optional[RefImage] = None
 
         if username is not None and username != self.username:
             if type(username) != str:
@@ -499,11 +525,13 @@ class User(IJsonableModel):
         if image is not None:
             if type(image) != str:
                 errors.append("'image' must be a string.")
-            elif image != self.image:
+            elif image != self.image.url:
                 if len(image) == 0:
-                    self.image = self.DEFAULT_IMAGE_URI
+                    self.image_id = 1
+                elif re.match(r"/image/([0-9]+)", image) is not None:
+                    self.image_id = int(image[7:])
                 else:
-                    self.image = image
+                    new_image = RefImage(_url=image)
                 modified = True
 
         if description is not None:
@@ -529,6 +557,11 @@ class User(IJsonableModel):
                 modified = True
 
         if modified and len(errors) == 0:
+            if new_image is not None:
+                db.session.add(new_image)
+                db.session.commit()
+                self.image_id = new_image.id
+
             db.session.commit()
 
         return errors
@@ -606,8 +639,7 @@ class User(IJsonableModel):
         username: str,
         password: str,
         email: str,
-        birthdate: datetime.date,
-        image_url: str = DEFAULT_IMAGE_URI
+        birthdate: datetime.date
     ) -> "User":
         """Registers a new user with the given credentials.
 
@@ -624,9 +656,6 @@ class User(IJsonableModel):
 
         birthdate: `datetime.date`
             The user's date of birth.
-
-        image_url: `str`
-            The user's profile picture.
 
         Returns
         =======
@@ -668,8 +697,7 @@ class User(IJsonableModel):
             password  = hashed_pwd,
             email     = email,
             birthdate = birthdate,
-            joined    = get_current_time(),
-            image     = image_url
+            joined    = get_current_time()
         )
 
         db.session.add(user)
@@ -956,9 +984,10 @@ class Story(IJsonableModel):
         index    = True
     )
 
-    thumbnail: str = db.Column(db.Text,
+    thumbnail_id: int = db.Column(db.Integer,
+        db.ForeignKey("images.id"),
         nullable = False,
-        default = DEFAULT_THUMBNAIL_URI
+        default  = 2
     )
 
     flags: Flags = db.Column(db.Integer,
@@ -976,6 +1005,12 @@ class Story(IJsonableModel):
 
     modified: datetime.datetime = db.Column(db.DateTime,
         nullable = False
+    )
+
+    thumbnail: RefImage = db.relationship("RefImage",
+        primaryjoin = "(RefImage.id == Story.thumbnail_id)",
+        cascade     = "all,delete",
+        uselist     = False
     )
 
     chapters: List["Chapter"] = db.relationship("Chapter",
@@ -1021,7 +1056,7 @@ class Story(IJsonableModel):
             "author": self.author.username,
             "title": self.title,
             "summary": self.summary,
-            "thumbnail": self.thumbnail,
+            "thumbnail": self.thumbnail.url,
 
             "chapters": [
                 chapter.expand(user, expand, expanded)
@@ -1100,6 +1135,7 @@ class Story(IJsonableModel):
         errors = []
         modified = False
         update_timestamp = False
+        new_image: Optional[RefImage] = None
 
         if title is not None:
             if type(title) != str:
@@ -1115,13 +1151,14 @@ class Story(IJsonableModel):
         if thumbnail is not None:
             if type(thumbnail) != str:
                 errors.append("'thumbnail' must be a string.")
-            elif thumbnail != self.thumbnail:
+            elif thumbnail != self.thumbnail.url:
                 if len(thumbnail) == 0:
-                    self.thumbnail = self.DEFAULT_THUMBNAIL_URI
-                    update_timestamp = True
+                    self.thumbnail_id = 2
+                elif re.match(r"/image/([0-9]+)", thumbnail) is not None:
+                    self.thumbnail_id = int(thumbnail[7:])
                 else:
-                    self.thumbnail = thumbnail
-                    update_timestamp = True
+                    new_image = RefImage(_url=thumbnail)
+                update_timestamp = True
 
         if summary is not None:
             if type(summary) != str:
@@ -1168,6 +1205,12 @@ class Story(IJsonableModel):
         if len(errors) == 0 and modified or update_timestamp:
             if update_timestamp:
                 self.modified = get_current_time()
+            
+            if new_image is not None:
+                db.session.add(new_image)
+                db.session.commit()
+                self.thumbnail = new_image
+            
             db.session.commit()
 
         return errors
@@ -1276,7 +1319,6 @@ class Story(IJsonableModel):
         author: User,
         title: str,
         summary: str = "",
-        thumbnail: str = DEFAULT_THUMBNAIL_URI,
         commit: bool = True
     ) -> "Story":
         """Creates a new story and adds it to the database.
@@ -1292,9 +1334,6 @@ class Story(IJsonableModel):
         summary: `str` = `""`
             The story's summary.
 
-        thumbnail: `str` = `DEFAULT_THUMBNAIL_URI`
-            The story's thumbnail.
-
         commit: `bool` = `True`
             Whether to commit the new story to the database immediately.
 
@@ -1308,9 +1347,6 @@ class Story(IJsonableModel):
 
         if type(summary) != str:
             errors.append("'summary' must be a string.")
-
-        if type(thumbnail) != str:
-            errors.append("'thumbnail' must be a string.")
         
         if title is None:
             errors.append("Missing parameter 'title'.")
@@ -1328,7 +1364,6 @@ class Story(IJsonableModel):
             author_id = author.id,
             title     = reduce_whitespace(title),
             summary   = reduce_whitespace(summary),
-            thumbnail = thumbnail,
             posted    = current_time,
             modified  = current_time
         )

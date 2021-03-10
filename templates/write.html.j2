@@ -58,7 +58,7 @@
                     id="story-thumbnail"
                     class="banner-img"
                 {% if estory is not none %}
-                    style="--image:url({{estory.thumbnail}});"
+                    style="--image:url({{estory.thumbnail.url}});"
                 {% else %}
                     style="--image:url({{g.DEFAULT_THUMBNAIL_URI}});"
                 {% endif %}

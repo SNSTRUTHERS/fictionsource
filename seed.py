@@ -6,6 +6,13 @@ def seed_db(db: SQLAlchemy) -> None:
     """Seeds the database with a predetermined data set."""
 
     GEN_PASSW = lambda s: generate_password_hash(s).decode("utf-8")
+
+    # Add default images
+    db.session.add_all((
+        RefImage(_url=User.DEFAULT_IMAGE_URI),
+        RefImage(_url=Story.DEFAULT_THUMBNAIL_URI)
+    ))
+    db.session.commit()
     
     # Add users
     users = (
@@ -95,6 +102,7 @@ def seed_db(db: SQLAlchemy) -> None:
             commit = False
         ),
     )
+    print("========================\n", stories[0], "\n========================")
 
     db.session.add_all(stories)
     db.session.commit()
@@ -154,6 +162,9 @@ gravida massa, vitae mollis diam.
         Chapter.new(stories[0], "The February Debate", commit=False),
         Chapter.new(stories[0], "The Campaign Begins", commit=False)
     )
+    chapters[1].index = 1
+    chapters[2].index = 2
+    chapters[3].index = 3
 
     db.session.add_all(chapters)
     db.session.commit()
@@ -162,8 +173,8 @@ gravida massa, vitae mollis diam.
     stories[0].update(private=False)
 
     # Add comments
-    c1 = Comment.new(users[1], "Hello world!", chapters[0])
-    c2 = Comment.new(users[0], "Hello seen6!", c1)
+    # c1 = Comment.new(users[1], "Hello world!", chapters[0])
+    # c2 = Comment.new(users[0], "Hello seen6!", c1)
 
-    c2.liked_by.append(users[1])
-    db.session.commit()
+    # c2.liked_by.append(users[1])
+    # db.session.commit()

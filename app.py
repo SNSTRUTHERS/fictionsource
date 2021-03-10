@@ -483,18 +483,9 @@ def edit_user_details(username: str):
     if request.form["description"] != "":
         updates['description'] = request.form["description"]
 
-    filename = None
-    f = None
+    f: IO = None
     if request.form["type"] == "file": # file upload
         f = request.files["file"]
-        
-        ext = f.filename.rsplit('.', 1)[1]
-        if allowed_file(f.filename):
-            filename = f"images/users/{token_urlsafe(64)}.{ext}"
-            while path.exists(filename[1:]):
-                filename = f"images/users/{token_urlsafe(64)}.{ext}"
-            
-            updates['image'] = '/static/' + filename
     elif request.form["type"] == "url" and request.form["url"] != "": # url
         updates['image'] = request.form["url"]
 
@@ -506,8 +497,13 @@ def edit_user_details(username: str):
         if len(errors) == 0:
             if 'username' in updates:
                 username = updates['username'] 
-            if filename is not None:
-                f.save(path.join(app.static_folder, filename))
+            if f is not None:
+                img = RefImage(data=f.read(), content_type=f.content_type)
+                db.session.add(img)
+                db.session.commit()
+
+                user.image = img
+                db.session.commit()
     
     for error in errors:
         flash(error, "error")
@@ -555,18 +551,15 @@ def change_story_thumbnail(story_id: int):
     if story is None or story.author_id != g.user.id:
         return redirect("/write")
 
-    filename: str = None
+    filename: Optional[str] = None
     if request.form["type"] == "file": # file upload
         f = request.files["file"]
-        
-        ext = f.filename.rsplit('.', 1)[1]
-        if allowed_file(f.filename):
-            filename = f"images/thumbnails/{token_urlsafe(64)}.{ext}"
-            while path.exists(filename[1:]):
-                filename = f"images/thumbnails/{token_urlsafe(64)}.{ext}"
 
-            f.save(path.join(app.static_folder, filename))
-            filename = "/static/" + filename
+        img = RefImage(data=f.read(), content_type=f.content_type)
+        db.session.add(img)
+        db.session.commit()
+
+        filename = img.url
     elif request.form["type"] == "url": # url
         filename = request.form["url"]
 
@@ -804,6 +797,20 @@ def search_page():
             count         = count
         )
 
+# ---- Retrieve Images --------------------------------------------------------------------------- #
+
+@app.route("/image/<int:image_id>")
+def get_image(image_id: int):
+    """Retrieves a database RefImage."""
+
+    img: RefImage = RefImage.query.get_or_404(image_id)
+    if img._url is not None:
+        return redirect(img._url)
+
+    response = make_response(img.data)
+    response.content_type = img.content_type
+    return response
+
 # == API ROUTES ================================================================================== #
 
 @app.route("/api")
@@ -954,8 +961,7 @@ def new_story():
         story = Story.new(
             author    = g.user,
             title     = request.json.get("title"),
-            summary   = request.json.get("summary", ""),
-            thumbnail = request.json.get("thumbnail", Story.DEFAULT_THUMBNAIL_URI)
+            summary   = request.json.get("summary", "")
         )
         return make_success_response(story.to_json(g.user), code=201)
     except ValueError as e:
