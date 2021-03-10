@@ -491,7 +491,7 @@ window.onload = async () => {
             tagInput.disabled = false;
             storyImageForm.action = `/write/${storyId}`;
 
-            storyThumbnail.src = storyInfo.thumbnail;
+            storyThumbnail.style.setProperty("--image", `url(${storyInfo.thumbnail})`);
 
             storyPrivateBox.checked = storyInfo.private;
             storyPrivateBox.disabled = false;
@@ -505,7 +505,9 @@ window.onload = async () => {
             }
         } else {
             storyImageForm.action = "";
-            storyThumbnail.src = "/static/images/thumbnails/default0.png";
+            storyThumbnail.style.setProperty("--image",
+                `url(/static/images/thumbnails/default0.png)`
+            );
         }
 
         saved = true;
