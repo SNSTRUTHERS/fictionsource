@@ -2,7 +2,7 @@
     <img src="{{story.thumbnail}}">
 
     <div>
-        <h3><a href="/read/{{story.id}}">{{story.title}}</a></h3>
+        <h3><a href="/read/{{story.chapters[0].id}}">{{story.title}}</a></h3>
 
 {% if NO_USERNAME is not defined %}
         <p>by <a href="/user/{{story.author.username}}">{{story.author.username}}</a></p>
