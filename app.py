@@ -1702,4 +1702,4 @@ if __name__ == "__main__":
         if "--seed-database" in argv:
             seed_db(db)
     
-    app.run()
+    app.run(threaded=True)
