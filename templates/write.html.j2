@@ -70,6 +70,7 @@
                 {% if estory is not none %}
                 >{{estory.summary}}</textarea>
                 {% else %}
+                    disabled
                 ></textarea>
                 {% endif %}
             </div>
@@ -177,6 +178,7 @@
             {% if echapter is not none and echapter.author_notes is not none %}
             >{{echapter.author_notes}}</textarea>
             {% else %}
+                disabled
             ></textarea>
             {% endif %}
             </div>

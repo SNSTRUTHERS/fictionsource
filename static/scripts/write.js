@@ -124,6 +124,15 @@ window.onload = async () => {
 
     /** @type {HTMLInputElement} */
     const chapterPrivateBox = document.getElementById("chapter-private");
+
+    /** @type {HTMLInputElement} */
+    const storyPrivateBox = document.getElementById("story-private");
+
+    /** @type {HTMLInputElement} */
+    const canCommentBox = document.getElementById("can-comment");
+
+    /** @type {HTMLInputElement} */
+    const isRisqueBox = document.getElementById("is-risque");
     
     /** @type {HTMLDivElement} */
     const storyFlags = document.getElementById("story-flags");
@@ -365,10 +374,15 @@ window.onload = async () => {
                 title: storyName.trim()
             });
 
-            stories.appendChild(newStoryRow(storyInfo));
-            stories.append(newStoryDiv);
+            const storyRow = newStoryRow(storyInfo);
+            if (currentStory())
+                currentStory().classList.remove("selected");
+            storyRow.classList.add("selected");
 
-            hideCover();
+            stories.getElementsByClassName("select-box")[0].appendChild(storyRow);
+            stories.append(newStoryDiv);
+            
+            await setStory(storyInfo.id);
             return true;
         }
 
@@ -438,7 +452,13 @@ window.onload = async () => {
         storyTagsForm.innerHTML = "";
 
         chapterPrivateBox.disabled = true;
+        storyPrivateBox.disabled = true;
+        canCommentBox.disabled = true;
+        if (isRisqueBox)
+            isRisqueBox.disabled = true;
+        
         summaryTextArea.disabled = true;
+        authorNotesTextArea.disabled = true;
 
         /** @type {APIStory} */
         const storyInfo = (storyId > 0) ?
@@ -471,9 +491,16 @@ window.onload = async () => {
             tagInput.disabled = false;
             storyImageForm.action = `/write/${storyId}`;
 
-            document.getElementById("story-private").checked = storyInfo.private;
-            document.getElementById("can-comment").checked = storyInfo.can_comment;
-            document.getElementById("is-risque").checked = storyInfo.is_risque;
+            storyPrivateBox.checked = storyInfo.private;
+            storyPrivateBox.disabled = false;
+
+            canCommentBox.checked = storyInfo.can_comment;
+            canCommentBox.disabled = false;
+            
+            if (isRisqueBox) {
+                isRisqueBox.checked = storyInfo.is_risque;
+                isRisqueBox.disabled = false;
+            }
         } else {
             storyImageForm.action = "";
         }
@@ -506,8 +533,15 @@ window.onload = async () => {
                 }
             );
 
-            chapters.appendChild(newChapterRow(chapterInfo));
+            const chapterRow = newChapterRow(chapterInfo);
+            if (currentChapter())
+                currentChapter().classList.remove("selected");
+            chapterRow.classList.add("selected");
+
+            chapters.getElementsByClassName("select-box")[0].appendChild(chapterRow);
             chapters.appendChild(newChapterDiv);
+
+            setChapter(chapterInfo.id);
 
             hideCover();
         }
@@ -519,43 +553,30 @@ window.onload = async () => {
 
         switch (event.target.nodeName.toLowerCase()) {
         case "i":
-            const storyTitle = parent.getElementsByTagName("div")[0].innerText;
+            const storyTitle = parent.getElementsByTagName("div")[0] ?
+                parent.getElementsByTagName("div")[0].innerText : null;
 
-            if (event.target.classList.contains("delete")) {
-                const pwd = prompt(`To delete "${storyTitle}", you must enter your password:`);
+            if (event.target.classList.contains("delete") &&
+                confirm(`Are you sure you want to delete "${storyTitle}"?`)
+            ) {
+                await apiCall(`story/${parent.dataset["id"]}`, "DELETE");
 
-                if (pwd !== null) {
-                    showCover();
+                if (parent.classList.contains("selected")) {
+                    const switchTo = parent.previousElementSibling ?
+                        parent.previousElementSibling :
+                        (parent.nextElementSibling ? parent.nextElementSibling : null)
+                    ;
 
-                    try {
-                        await apiCall("", "GET", undefined, {
-                            username: username,
-                            password: pwd
-                        });
-
-                        await apiCall(`story/${parent.dataset["id"]}`, "DELETE");
-
-                        if (parent.classList.contains("selected")) {
-                            const switchTo = parent.previousElementSibling ?
-                                parent.previousElementSibling :
-                                (parent.nextElementSibling ? parent.nextElementSibling : null)
-                            ;
-
-                            if (switchTo !== null) {
-                                switchTo.classList.add("selected");
-                                await setStory(switchTo.dataset["id"]);
-                            } else {
-                                await setStory(0);
-                            }
-                        }
-
-                        parent.remove();
-                    } catch (e) {
-                        alert("Invalid credentials provided.");
+                    if (switchTo !== null) {
+                        switchTo.classList.add("selected");
+                        await setStory(switchTo.dataset["id"]);
+                    } else {
+                        await setStory(0);
                     }
-
-                    hideCover();
                 }
+
+                parent.remove();
+                hideCover();
             } else if (event.target.classList.contains("rename")) {
                 const newTitle = prompt(`Rename story "${storyTitle}":`);
 
@@ -593,46 +614,30 @@ window.onload = async () => {
 
         switch (event.target.nodeName.toLowerCase()) {
         case "i":
-            if (event.target.classList.contains("delete")) {
-                const 
-                    chapterTitle = parent.getElementsByTagName("div")[0].innerText,
-                    pwd = prompt(`To delete "${chapterTitle}", you must enter your password:`)
+            const chapterTitle = parent.getElementsByTagName("div")[0] ?
+                parent.getElementsByTagName("div")[0].innerText : null
+            ;
+
+            if (event.target.classList.contains("delete") &&
+                confirm(`Are you sure you want to delete "${chapterTitle}"?`)
+            ) {
+                await apiCall(`chapter/${parent.dataset["id"]}`, "DELETE");
+                
+                const switchTo = parent.previousElementSibling ?
+                    parent.previousElementSibling :
+                    (parent.nextElementSibling ? parent.nextElementSibling : null)
                 ;
 
-                if (pwd !== null) {
-                    showCover();
-
-                    try {
-                        await apiCall("", "GET", undefined, {
-                            username: username,
-                            password: pwd
-                        });
-
-                        await apiCall(`chapter/${parent.dataset["id"]}`, "DELETE");
-                        
-                        const switchTo = parent.previousElementSibling ?
-                            parent.previousElementSibling :
-                            (parent.nextElementSibling ? parent.nextElementSibling : null)
-                        ;
-
-                        if (switchTo !== null) {
-                            switchTo.classList.add("selected");
-                            await setChapter(switchTo.dataset["id"]);
-                        } else {
-                            await setChapter(0);
-                        }
-                        parent.remove();
-                    } catch (e) {
-                        alert("Invalid credentials provided.");
-                    }
-
-                    hideCover();
+                if (switchTo !== null) {
+                    switchTo.classList.add("selected");
+                    await setChapter(switchTo.dataset["id"]);
+                } else {
+                    await setChapter(0);
                 }
+                parent.remove();
+                hideCover();
             } else if (event.target.classList.contains("rename")) {
-                const 
-                    chapterName = parent.getElementsByTagName("div")[0].innerText,
-                    newName = prompt(`Rename chapter "${chapterName}":`);
-                ;
+                const newName = prompt(`Rename chapter "${chapterName}":`);
 
                 if (!!newName &&
                     newName.trim() !== chapterName &&
@@ -874,7 +879,7 @@ window.onload = async () => {
 
     // bring up change thumbnail dialog
     storyThumbnail.onclick = () => {
-        if (!coverIsHidden() || storyImageForm.action === "")
+        if (!coverIsHidden() || storyImageForm.action === "" || !currentStory())
             return;
         
         showCover();
