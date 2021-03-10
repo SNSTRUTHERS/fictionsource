@@ -204,8 +204,8 @@ class IMarkdownModel(IJsonableModel):
 
     __abstract__ = True
 
-    RE1: re.Pattern = re.compile(r"\<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)?(\<\/\1>)?", re.IGNORECASE)
-    RE2: re.Pattern = re.compile(r"\$\{([0-9A-Z \-_]+)?\}", re.IGNORECASE)
+    RE1 = re.compile(r"\<([A-Z][A-Z0-9]*)\b[^>]*>(.*?)?(\<\/\1>)?", re.IGNORECASE)
+    RE2 = re.compile(r"\$\{([0-9A-Z \-_]+)?\}", re.IGNORECASE)
 
     text: str = db.Column(db.Text, nullable=False)
     _html: Optional[str] = db.Column(db.Text)
