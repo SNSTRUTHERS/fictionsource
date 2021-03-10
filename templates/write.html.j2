@@ -177,7 +177,7 @@
                 placeholder="Author's Notes"
             {% if echapter is not none and echapter.author_notes is not none %}
             >{{echapter.author_notes}}</textarea>
-            {% else %}
+            {% elif echapter is none %}
                 disabled
             ></textarea>
             {% endif %}
