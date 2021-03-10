@@ -503,9 +503,9 @@ def edit_user_details(username: str):
     if len(errors) == 0:
         errors = user.update(**updates)
 
-        if 'username' in updates:
-            username = updates['username']
-            
+        if len(errors) == 0:
+            if 'username' in updates:
+                username = updates['username'] 
             if filename is not None:
                 f.save(path.join(app.static_folder, filename))
     
