@@ -1,4 +1,4 @@
-from app import app, run_app
+from app import app, setup_app
 
 application = app
-run_app()
+setup_app()

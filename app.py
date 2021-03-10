@@ -1679,7 +1679,7 @@ def tag_listing(tag_name: str):
 
 # == START SERVER ================================================================================ #
 
-def run_app():
+def setup_app():
     from flask_debugtoolbar import DebugToolbarExtension
     from sys import argv
 
@@ -1701,8 +1701,7 @@ def run_app():
 
         if "--seed-database" in argv:
             seed_db(db)
-    
-    app.run(debug=False)
 
 if __name__ == "__main__":
-    run_app()
+    setup_app()
+    app.run(debug=False)
