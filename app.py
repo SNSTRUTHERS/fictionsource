@@ -588,7 +588,11 @@ def read_page(chapter_id: int):
     if not chapter.visible(g.user):
         return error_404(None)
 
-    if chapter.story.author_id == g.user.id and chapter.story.private or chapter.story.protected:
+    if (g.user is not None and
+        chapter.story.author_id == g.user.id and
+        chapter.story.private or
+        chapter.story.protected
+    ):
         return redirect(f"/write?chapter={chapter_id}")
 
     return render_template("read.html.j2", g=g, chapter=chapter)
