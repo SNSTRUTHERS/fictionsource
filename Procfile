@@ -1,1 +1,1 @@
-web: uwsgi --http-socket --wsgi-file main.py
+web: uwsgi uwsgi.ini
